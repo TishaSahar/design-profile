@@ -1,0 +1,23 @@
+server:
+  host: 0.0.0.0
+  port: 8080
+
+database:
+  host: localhost
+  port: 5432
+  name: design_portfolio
+  user: tikhon
+  password: ""
+  ssl_mode: disable
+
+email:
+  smtp_host: smtp.gmail.com
+  smtp_port: 587
+  username: andreev.tihon@gmail.com
+  password: Jimmy-1963-Page
+  sender: Tikhon Sakharov
+  admin_email: andreev.tihon@gmail.com
+
+jwt:
+  secret: change-this-to-a-long-random-secret-key-at-least-32-chars
+  expiration_hours: 24
