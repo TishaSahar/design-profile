@@ -73,10 +73,9 @@ cd design-profile/backend
 # 2. Установить зависимости Go
 go mod tidy
 
-# 3. Скопировать шаблон конфигурации и заполнить значения
-cp config/config.yaml.example config/config.yaml
-# Отредактируйте config/config.yaml (см. раздел ниже)
-# ВАЖНО: config/config.yaml содержит секреты и исключён из git (.gitignore)
+# 3. Скопировать и заполнить конфигурацию
+cp config/config.yaml config/config.local.yaml
+# Отредактируйте config/config.local.yaml (см. раздел ниже)
 
 # 4. Сгенерировать Swagger-документацию
 make swagger
