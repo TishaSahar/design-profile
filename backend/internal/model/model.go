@@ -62,7 +62,9 @@ type Attachment struct {
 
 // Contacts holds the designer's public contact information.
 type Contacts struct {
-	Telegram  string `json:"telegram"  db:"telegram"`
-	Instagram string `json:"instagram" db:"instagram"`
-	Email     string `json:"email"     db:"email"`
+	Telegram  string `json:"telegram"            db:"telegram"`
+	Instagram string `json:"instagram"           db:"instagram"`
+	Email     string `json:"email"               db:"email"`
+	Bio       string `json:"bio,omitempty"`
+	PhotoURL  string `json:"photo_url,omitempty"`
 }

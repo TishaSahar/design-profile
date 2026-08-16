@@ -103,8 +103,19 @@ async function renderAbout(main) {
   const result = await api.contacts.get();
   const c = result.data ?? {};
 
+  const bioHTML = (c.bio || "")
+    .split(/\n{2,}/)
+    .filter(Boolean)
+    .map((para) => `<p>${esc(para).replace(/\n/g, "<br>")}</p>`)
+    .join("");
+
   main.innerHTML = `
     <section class="about">
+      ${c.photo_url ? `
+        <div class="about__hero">
+          <img src="${api.contacts.photoUrl()}" alt="" class="about__photo">
+        </div>` : ""}
+      ${bioHTML ? `<div class="about__bio">${bioHTML}</div>` : ""}
       <h1 class="about__title">${t("about_title")}</h1>
       <div class="about__directory">
         ${c.email ? `

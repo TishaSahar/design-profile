@@ -62,10 +62,22 @@ func main() {
 	}
 
 	// Load designer contacts from YAML file.
-	contactsPath := filepath.Join(filepath.Dir(*cfgPath), "about/contacts.yaml")
-	aboutContacts, err := about.LoadContacts(contactsPath)
+	aboutDir := filepath.Join(filepath.Dir(*cfgPath), "about")
+	aboutContacts, err := about.LoadContacts(filepath.Join(aboutDir, "contacts.yaml"))
 	if err != nil {
 		log.Fatalf("load about contacts: %v", err)
+	}
+
+	bio, err := about.LoadBio(filepath.Join(aboutDir, "bio.txt"))
+	if err != nil {
+		slog.Warn("about bio not loaded", "err", err)
+	}
+
+	photoPath := ""
+	photoURL := ""
+	if aboutContacts.Photo != "" {
+		photoPath = filepath.Join(aboutDir, aboutContacts.Photo)
+		photoURL = "/about/photo"
 	}
 
 	// Build dependency tree.
@@ -85,7 +97,9 @@ func main() {
 		Email:     aboutContacts.Email,
 		Instagram: aboutContacts.Instagram,
 		Telegram:  aboutContacts.Telegram,
-	})
+		Bio:       bio,
+		PhotoURL:  photoURL,
+	}, photoPath)
 
 	authH := handler.NewAuthHandler(authSvc)
 	projectH := handler.NewProjectHandler(projectSvc)
@@ -129,6 +143,7 @@ func main() {
 
 	// Public contact routes.
 	v1.GET("/contacts", contactH.GetContacts)
+	v1.GET("/about/photo", contactH.ServePhoto)
 
 	// Public request submission.
 	v1.POST("/requests", requestH.CreateRequest)
