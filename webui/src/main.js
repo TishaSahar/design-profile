@@ -2,7 +2,7 @@ import { api } from "./api.js";
 import { t, getLang, setLang, applyTranslations } from "./locales.js";
 
 // ── Language switcher ─────────────────────────────────────────────────────────
-document.querySelectorAll(".lang-btn").forEach((btn) => {
+document.querySelectorAll(".lang-option").forEach((btn) => {
   btn.addEventListener("click", () => {
     setLang(btn.dataset.lang);
     applyTranslations();

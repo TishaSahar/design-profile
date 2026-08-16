@@ -81,7 +81,7 @@ export const LOCALES = {
     modal_consent_label: "I consent to the",
     modal_consent_link: "processing of personal data",
     modal_consent_body:
-      "By clicking "Submit", you agree that the personal data you provide (name, contact information) will be processed solely for the purpose of responding to your inquiry. Data is not shared with third parties and is stored in accordance with applicable data protection law.",
+      `By clicking "Submit", you agree that the personal data you provide (name, contact information) will be processed solely for the purpose of responding to your inquiry. Data is not shared with third parties and is stored in accordance with applicable data protection law.`,
     modal_submit: "Submit request",
     modal_success_title: "Request submitted!",
     modal_success_body: "We will contact you shortly.",
@@ -111,9 +111,12 @@ export function applyTranslations() {
   document.querySelectorAll("[data-i18n]").forEach((el) => {
     el.textContent = t(el.dataset.i18n);
   });
-  document.querySelectorAll(".lang-btn").forEach((btn) => {
-    btn.classList.toggle("lang-btn--active", btn.dataset.lang === getLang());
+  const lang = getLang();
+  document.querySelectorAll(".lang-option").forEach((btn) => {
+    btn.classList.toggle("lang-option--active", btn.dataset.lang === lang);
   });
+  const label = document.querySelector(".lang-current-label");
+  if (label) label.textContent = lang.toUpperCase();
   document.title = t("site_title");
-  document.documentElement.lang = getLang();
+  document.documentElement.lang = lang;
 }
