@@ -81,7 +81,7 @@ export const LOCALES = {
     modal_consent_label: "I consent to the",
     modal_consent_link: "processing of personal data",
     modal_consent_body:
-      "By clicking "Submit", you agree that the personal data you provide (name, contact information) will be processed solely for the purpose of responding to your inquiry. Data is not shared with third parties and is stored in accordance with applicable data protection law.",
+      `By clicking "Submit", you agree that the personal data you provide (name, contact information) will be processed solely for the purpose of responding to your inquiry. Data is not shared with third parties and is stored in accordance with applicable data protection law.`,
     modal_submit: "Submit request",
     modal_success_title: "Request submitted!",
     modal_success_body: "We will contact you shortly.",
