@@ -15,12 +15,15 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"path/filepath"
 
 	"design-profile/backend/config"
+	"design-profile/backend/config/about"
 	_ "design-profile/backend/docs"
 	"design-profile/backend/internal/email"
 	"design-profile/backend/internal/handler"
 	"design-profile/backend/internal/middleware"
+	"design-profile/backend/internal/model"
 	"design-profile/backend/internal/repository"
 	"design-profile/backend/internal/service"
 	"design-profile/backend/migrations"
@@ -58,11 +61,17 @@ func main() {
 		log.Fatalf("run migrations: %v", err)
 	}
 
+	// Load designer contacts from YAML file.
+	contactsPath := filepath.Join(filepath.Dir(*cfgPath), "about/contacts.yaml")
+	aboutContacts, err := about.LoadContacts(contactsPath)
+	if err != nil {
+		log.Fatalf("load about contacts: %v", err)
+	}
+
 	// Build dependency tree.
 	otpRepo := repository.NewOTPRepository(pool)
 	projectRepo := repository.NewProjectRepository(pool)
 	requestRepo := repository.NewRequestRepository(pool)
-	contactRepo := repository.NewContactRepository(pool)
 
 	emailClient := email.NewClient(
 		cfg.Email.SMTPHost, cfg.Email.SMTPPort,
@@ -72,7 +81,11 @@ func main() {
 	authSvc := service.NewAuthService(otpRepo, emailClient, cfg.Email.AdminEmail, cfg.JWT.Secret, cfg.JWT.ExpirationHours)
 	projectSvc := service.NewProjectService(projectRepo)
 	requestSvc := service.NewRequestService(requestRepo)
-	contactSvc := service.NewContactService(contactRepo)
+	contactSvc := service.NewContactService(&model.Contacts{
+		Email:     aboutContacts.Email,
+		Instagram: aboutContacts.Instagram,
+		Telegram:  aboutContacts.Telegram,
+	})
 
 	authH := handler.NewAuthHandler(authSvc)
 	projectH := handler.NewProjectHandler(projectSvc)
@@ -142,8 +155,6 @@ func main() {
 			adminRequests.GET("/:id/attachments/:attachmentId", requestH.ServeAttachment)
 		}
 
-		// Contacts management.
-		admin.PUT("/contacts", contactH.UpdateContacts)
 	}
 
 	addr := cfg.Server.Addr()
