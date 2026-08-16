@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -10,12 +11,17 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// AuthHandler handles authentication endpoints.
-type AuthHandler struct {
-	svc *service.AuthService
+type authSvc interface {
+	RequestOTP(ctx context.Context, email string) error
+	VerifyOTP(ctx context.Context, email, code string) (string, error)
 }
 
-func NewAuthHandler(svc *service.AuthService) *AuthHandler {
+// AuthHandler handles authentication endpoints.
+type AuthHandler struct {
+	svc authSvc
+}
+
+func NewAuthHandler(svc authSvc) *AuthHandler {
 	return &AuthHandler{svc: svc}
 }
 

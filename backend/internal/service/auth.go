@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"design-profile/backend/internal/auth"
-	"design-profile/backend/internal/email"
 	"design-profile/backend/internal/model"
-	"design-profile/backend/internal/repository"
+
+	"github.com/google/uuid"
 )
 
 const otpTTL = 10 * time.Minute
@@ -18,17 +18,28 @@ const otpTTL = 10 * time.Minute
 // ErrInvalidOTP is returned when an OTP is wrong or expired.
 var ErrInvalidOTP = errors.New("invalid or expired OTP")
 
+type otpStorer interface {
+	Create(ctx context.Context, email, code string, expiresAt time.Time) (*model.OTPToken, error)
+	FindActive(ctx context.Context, email, code string) (*model.OTPToken, error)
+	MarkUsed(ctx context.Context, id uuid.UUID) error
+}
+
+type emailSender interface {
+	SendOTP(to, code string) error
+	Host() string
+}
+
 type AuthService struct {
-	otpRepo    *repository.OTPRepository
-	emailClient *email.Client
+	otpRepo     otpStorer
+	emailClient emailSender
 	adminEmail  string
 	jwtSecret   string
 	jwtExpHours int
 }
 
 func NewAuthService(
-	otpRepo *repository.OTPRepository,
-	emailClient *email.Client,
+	otpRepo otpStorer,
+	emailClient emailSender,
 	adminEmail, jwtSecret string,
 	jwtExpHours int,
 ) *AuthService {
@@ -95,5 +106,3 @@ func (s *AuthService) ValidateToken(tokenStr string) (*auth.Claims, error) {
 	return auth.ValidateToken(tokenStr, s.jwtSecret)
 }
 
-// Ensure compile-time model import is used.
-var _ = model.OTPToken{}

@@ -4,14 +4,18 @@ import (
 	"context"
 
 	"design-profile/backend/internal/model"
-	"design-profile/backend/internal/repository"
 )
 
-type ContactService struct {
-	repo *repository.ContactRepository
+type contactRepo interface {
+	Get(ctx context.Context) (*model.Contacts, error)
+	Update(ctx context.Context, c *model.Contacts) (*model.Contacts, error)
 }
 
-func NewContactService(repo *repository.ContactRepository) *ContactService {
+type ContactService struct {
+	repo contactRepo
+}
+
+func NewContactService(repo contactRepo) *ContactService {
 	return &ContactService{repo: repo}
 }
 

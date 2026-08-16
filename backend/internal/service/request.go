@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"design-profile/backend/internal/model"
-	"design-profile/backend/internal/repository"
 
 	"github.com/google/uuid"
 )
@@ -15,11 +14,19 @@ const (
 	maxAttachmentSize   = 20 * 1024 * 1024 // 20 MB per file
 )
 
-type RequestService struct {
-	repo *repository.RequestRepository
+type requestRepo interface {
+	Create(ctx context.Context, req *model.ProjectRequest) (*model.ProjectRequest, error)
+	AddAttachment(ctx context.Context, requestID uuid.UUID, data []byte, contentType, filename string) (*model.Attachment, error)
+	List(ctx context.Context) ([]model.ProjectRequest, error)
+	GetByID(ctx context.Context, id uuid.UUID) (*model.ProjectRequest, error)
+	GetAttachmentData(ctx context.Context, attachmentID uuid.UUID) ([]byte, string, error)
 }
 
-func NewRequestService(repo *repository.RequestRepository) *RequestService {
+type RequestService struct {
+	repo requestRepo
+}
+
+func NewRequestService(repo requestRepo) *RequestService {
 	return &RequestService{repo: repo}
 }
 
