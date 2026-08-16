@@ -55,7 +55,7 @@ h3 { font-size: 1.1rem; font-weight: 500; }
   font-size: .875rem;
   letter-spacing: .04em;
   text-transform: uppercase;
-  opacity: .6;
+  opacity: .78;
   transition: opacity .2s;
 }
 .site-nav__link:hover { opacity: 1; }
@@ -66,16 +66,17 @@ h3 { font-size: 1.1rem; font-weight: 500; }
   display: flex;
   align-items: center;
   gap: .25rem;
-  font-size: .7rem;
+  font-size: .68rem;
+  font-weight: 300;
   letter-spacing: .09em;
   text-transform: uppercase;
-  color: #bbb;
+  color: #ccc;
   cursor: default;
   user-select: none;
   padding: .4rem .1rem;
   transition: color .2s;
 }
-.lang-switcher:hover .lang-trigger { color: #666; }
+.lang-switcher:hover .lang-trigger { color: #888; }
 .lang-arrow { flex-shrink: 0; color: inherit; transition: transform .2s; }
 .lang-switcher:hover .lang-arrow { transform: rotate(180deg); }
 
