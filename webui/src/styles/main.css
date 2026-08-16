@@ -379,10 +379,18 @@ h3 { font-size: 1.1rem; font-weight: 500; }
 
 /* ── Responsive ───────────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
-  .site-header__right { gap: 1rem; }
-  .site-nav { gap: 1rem; }
-  .site-nav__link { font-size: .75rem; }
+  .site-header__inner {
+    flex-direction: column;
+    align-items: flex-start;
+    height: auto;
+    padding-top: .75rem;
+    padding-bottom: .75rem;
+    gap: .55rem;
+  }
+  .site-nav { gap: 1.25rem; flex-wrap: wrap; }
+  .site-nav__link { font-size: .78rem; }
   .grid { grid-template-columns: 1fr; }
+  .about__hero { aspect-ratio: 4/3; }
   .admin-header { padding: 0 1rem; }
   .admin-main { padding: 1rem; }
   .dir-row { flex-direction: column; align-items: flex-start; gap: .25rem; }
