@@ -1,4 +1,16 @@
 import { api } from "./api.js";
+import { t, getLang, setLang, applyTranslations } from "./locales.js";
+
+// ── Language switcher ─────────────────────────────────────────────────────────
+document.querySelectorAll(".lang-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    setLang(btn.dataset.lang);
+    applyTranslations();
+    navigate();
+  });
+});
+
+applyTranslations();
 
 // ── Router ────────────────────────────────────────────────────────────────────
 function getRoute() {
@@ -6,6 +18,7 @@ function getRoute() {
   const match = hash.match(/^\/project\/([a-f0-9-]+)/);
   if (match) return { page: "project", id: match[1] };
   if (hash === "/contacts") return { page: "contacts" };
+  if (hash === "/about")    return { page: "about" };
   return { page: "portfolio" };
 }
 
@@ -14,27 +27,24 @@ async function navigate() {
   const main = document.getElementById("main");
   main.innerHTML = `<div class="loader"></div>`;
   try {
-    if (route.page === "project") {
-      await renderProject(main, route.id);
-    } else if (route.page === "contacts") {
-      await renderContacts(main);
-    } else {
-      await renderPortfolio(main);
-    }
+    if      (route.page === "project")   await renderProject(main, route.id);
+    else if (route.page === "contacts")  await renderContacts(main);
+    else if (route.page === "about")     await renderAbout(main);
+    else                                 await renderPortfolio(main);
   } catch (err) {
-    main.innerHTML = `<p class="error">Ошибка загрузки: ${err.message}</p>`;
+    main.innerHTML = `<p class="error">${t("err_load")} ${err.message}</p>`;
   }
 }
 
 window.addEventListener("hashchange", navigate);
 
-// ── Portfolio page ─────────────────────────────────────────────────────────────
+// ── Portfolio page ────────────────────────────────────────────────────────────
 async function renderPortfolio(main) {
   const result = await api.projects.list();
   const projects = result.data ?? [];
 
   if (projects.length === 0) {
-    main.innerHTML = `<p class="empty">Проекты появятся здесь совсем скоро.</p>`;
+    main.innerHTML = `<p class="empty">${t("portfolio_empty")}</p>`;
     return;
   }
 
@@ -60,7 +70,7 @@ async function renderPortfolio(main) {
   }
 }
 
-// ── Project detail page ────────────────────────────────────────────────────────
+// ── Project detail page ───────────────────────────────────────────────────────
 async function renderProject(main, id) {
   const result = await api.projects.get(id);
   const p = result.data;
@@ -76,40 +86,85 @@ async function renderProject(main, id) {
 
   main.innerHTML = `
     <div class="project">
-      <a href="#/" class="btn btn--ghost">&larr; Назад</a>
+      <a href="#/" class="btn btn--ghost">${t("project_back")}</a>
       <h1 class="project__title">${esc(p.title)}</h1>
       ${p.description ? `<p class="project__desc">${esc(p.description)}</p>` : ""}
-      <div class="gallery">${mediaHTML || "<p class='empty'>Фото будут добавлены.</p>"}</div>
+      <div class="gallery">${mediaHTML || `<p class="empty">${t("project_no_photos")}</p>`}</div>
       <div class="project__cta">
-        <button class="btn btn--primary" id="open-request">Оставить заявку</button>
+        <button class="btn btn--primary" id="open-request">${t("project_request_btn")}</button>
       </div>
     </div>`;
 
   document.getElementById("open-request")?.addEventListener("click", openRequestModal);
 }
 
-// ── Contacts page ──────────────────────────────────────────────────────────────
-async function renderContacts(main) {
+// ── About page ────────────────────────────────────────────────────────────────
+async function renderAbout(main) {
   const result = await api.contacts.get();
-  const c = result.data;
+  const c = result.data ?? {};
 
   main.innerHTML = `
-    <section class="contacts">
-      <h1 class="contacts__title">Контакты</h1>
-      <ul class="contacts__list">
-        ${c.telegram  ? `<li><a href="https://t.me/${c.telegram.replace("@","")}"  target="_blank" rel="noopener" class="contact-link contact-link--telegram">Telegram: ${esc(c.telegram)}</a></li>`  : ""}
-        ${c.instagram ? `<li><a href="https://instagram.com/${c.instagram.replace("@","")}" target="_blank" rel="noopener" class="contact-link contact-link--instagram">Instagram: ${esc(c.instagram)}</a></li>` : ""}
-        ${c.email     ? `<li><a href="mailto:${c.email}" class="contact-link contact-link--email">Email: ${esc(c.email)}</a></li>` : ""}
-      </ul>
-      <div class="contacts__cta">
-        <button class="btn btn--primary" id="open-request">Оставить заявку на проект</button>
+    <section class="about">
+      <h1 class="about__title">${t("about_title")}</h1>
+      <div class="about__directory">
+        ${c.email ? `
+          <div class="dir-row">
+            <span class="dir-row__label">${t("about_email")}</span>
+            <a href="mailto:${esc(c.email)}" class="dir-row__value">${esc(c.email)}</a>
+          </div>` : ""}
+        ${c.instagram ? `
+          <div class="dir-row">
+            <span class="dir-row__label">${t("about_instagram")}</span>
+            <a href="https://instagram.com/${c.instagram.replace("@", "")}" target="_blank" rel="noopener" class="dir-row__value">${esc(c.instagram)}</a>
+          </div>` : ""}
+        ${c.telegram ? `
+          <div class="dir-row">
+            <span class="dir-row__label">${t("about_telegram")}</span>
+            <a href="https://t.me/${c.telegram.replace("@", "")}" target="_blank" rel="noopener" class="dir-row__value">${esc(c.telegram)}</a>
+          </div>` : ""}
+      </div>
+      <div class="about__cta">
+        <button class="btn btn--primary" id="open-request">${t("about_request_btn")}</button>
       </div>
     </section>`;
 
   document.getElementById("open-request")?.addEventListener("click", openRequestModal);
 }
 
-// ── Request modal ──────────────────────────────────────────────────────────────
+// ── Contacts page ─────────────────────────────────────────────────────────────
+async function renderContacts(main) {
+  const result = await api.contacts.get();
+  const c = result.data ?? {};
+
+  main.innerHTML = `
+    <section class="contacts">
+      <h1 class="contacts__title">${t("contacts_title")}</h1>
+      <div class="about__directory">
+        ${c.email ? `
+          <div class="dir-row">
+            <span class="dir-row__label">${t("contacts_email")}</span>
+            <a href="mailto:${esc(c.email)}" class="dir-row__value">${esc(c.email)}</a>
+          </div>` : ""}
+        ${c.instagram ? `
+          <div class="dir-row">
+            <span class="dir-row__label">${t("contacts_instagram")}</span>
+            <a href="https://instagram.com/${c.instagram.replace("@", "")}" target="_blank" rel="noopener" class="dir-row__value">${esc(c.instagram)}</a>
+          </div>` : ""}
+        ${c.telegram ? `
+          <div class="dir-row">
+            <span class="dir-row__label">${t("contacts_telegram")}</span>
+            <a href="https://t.me/${c.telegram.replace("@", "")}" target="_blank" rel="noopener" class="dir-row__value">${esc(c.telegram)}</a>
+          </div>` : ""}
+      </div>
+      <div class="contacts__cta">
+        <button class="btn btn--primary" id="open-request">${t("contacts_request_btn")}</button>
+      </div>
+    </section>`;
+
+  document.getElementById("open-request")?.addEventListener("click", openRequestModal);
+}
+
+// ── Request modal ─────────────────────────────────────────────────────────────
 function openRequestModal() {
   const overlay = document.getElementById("modal-overlay");
   overlay.classList.remove("hidden");
@@ -126,29 +181,27 @@ function closeModal() {
 function buildRequestForm() {
   return `
     <div class="modal">
-      <button id="close-modal" class="modal__close" aria-label="Закрыть">&times;</button>
-      <h2 class="modal__title">Заявка на проект</h2>
+      <button id="close-modal" class="modal__close" aria-label="${t("modal_close")}">&times;</button>
+      <h2 class="modal__title">${t("modal_title")}</h2>
       <form id="request-form" class="form" enctype="multipart/form-data" novalidate>
         <div class="form__row">
-          <label class="form__label" for="rf-first">Имя *</label>
+          <label class="form__label" for="rf-first">${t("modal_first_name")}</label>
           <input id="rf-first" name="first_name" class="form__input" required>
         </div>
         <div class="form__row">
-          <label class="form__label" for="rf-last">Фамилия *</label>
+          <label class="form__label" for="rf-last">${t("modal_last_name")}</label>
           <input id="rf-last" name="last_name" class="form__input" required>
         </div>
         <div class="form__row">
-          <label class="form__label" for="rf-contact">Контакт (телефон / e-mail / Telegram) *</label>
+          <label class="form__label" for="rf-contact">${t("modal_contact")}</label>
           <input id="rf-contact" name="contact" class="form__input" required>
         </div>
         <div class="form__row">
-          <label class="form__label" for="rf-desc">Описание проекта *</label>
+          <label class="form__label" for="rf-desc">${t("modal_description")}</label>
           <textarea id="rf-desc" name="description" class="form__textarea" rows="4" required></textarea>
         </div>
         <div class="form__row">
-          <label class="form__label" for="rf-files">
-            Приложите до 10 фото или 1 PDF с чертежами
-          </label>
+          <label class="form__label" for="rf-files">${t("modal_files")}</label>
           <input id="rf-files" name="attachments" type="file"
             accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
             multiple class="form__file">
@@ -156,15 +209,15 @@ function buildRequestForm() {
         <div class="form__row form__row--consent">
           <label class="form__checkbox-label">
             <input type="checkbox" id="rf-consent" name="consented" class="form__checkbox" required>
-            Я даю согласие на
-            <button type="button" class="btn-link" id="show-consent">обработку персональных данных</button>
+            ${t("modal_consent_label")}
+            <button type="button" class="btn-link" id="show-consent">${t("modal_consent_link")}</button>
           </label>
         </div>
         <div id="consent-text" class="consent-text hidden">
-          <p>Нажимая кнопку «Отправить», вы соглашаетесь с тем, что предоставленные вами персональные данные (имя, контактная информация) будут обработаны исключительно в целях ответа на ваш запрос. Данные не передаются третьим лицам и хранятся в соответствии с законодательством о защите персональных данных.</p>
+          <p>${t("modal_consent_body")}</p>
         </div>
         <div id="form-error" class="form__error hidden"></div>
-        <button type="submit" class="btn btn--primary btn--full">Отправить заявку</button>
+        <button type="submit" class="btn btn--primary btn--full">${t("modal_submit")}</button>
       </form>
     </div>`;
 }
@@ -176,7 +229,7 @@ async function submitRequest(e) {
   errEl.classList.add("hidden");
 
   if (!form.querySelector("#rf-consent").checked) {
-    showFormError(errEl, "Необходимо согласие на обработку персональных данных.");
+    showFormError(errEl, t("err_consent"));
     return;
   }
 
@@ -187,9 +240,9 @@ async function submitRequest(e) {
     await api.requests.create(fd);
     form.closest(".modal").innerHTML = `
       <div class="modal__success">
-        <h2>Заявка отправлена!</h2>
-        <p>Мы свяжемся с вами в ближайшее время.</p>
-        <button class="btn btn--primary" onclick="document.getElementById('modal-overlay').classList.add('hidden')">Закрыть</button>
+        <h2>${t("modal_success_title")}</h2>
+        <p>${t("modal_success_body")}</p>
+        <button class="btn btn--primary" onclick="document.getElementById('modal-overlay').classList.add('hidden')">${t("modal_close")}</button>
       </div>`;
   } catch (err) {
     showFormError(errEl, err.message);
@@ -201,14 +254,14 @@ function showFormError(el, msg) {
   el.classList.remove("hidden");
 }
 
-// ── Consent text toggle ────────────────────────────────────────────────────────
+// ── Consent text toggle ───────────────────────────────────────────────────────
 document.addEventListener("click", (e) => {
   if (e.target.id === "show-consent") {
     document.getElementById("consent-text")?.classList.toggle("hidden");
   }
 });
 
-// ── Utilities ──────────────────────────────────────────────────────────────────
+// ── Utilities ─────────────────────────────────────────────────────────────────
 function esc(str) {
   return String(str ?? "")
     .replace(/&/g, "&amp;")

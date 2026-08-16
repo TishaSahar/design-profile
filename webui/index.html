@@ -12,11 +12,19 @@
 <body>
   <header class="site-header">
     <div class="site-header__inner">
-      <a href="#/" class="site-header__logo">Ольга</a>
-      <nav class="site-nav">
-        <a href="#/" class="site-nav__link">Портфолио</a>
-        <a href="#/contacts" class="site-nav__link">Контакты</a>
-      </nav>
+      <a href="#/" class="site-header__logo" data-i18n="logo">Ольга</a>
+      <div class="site-header__right">
+        <nav class="site-nav">
+          <a href="#/" class="site-nav__link" data-i18n="nav_portfolio">Портфолио</a>
+          <a href="#/about" class="site-nav__link" data-i18n="nav_about">Обо мне</a>
+          <a href="#/contacts" class="site-nav__link" data-i18n="nav_contacts">Контакты</a>
+        </nav>
+        <div class="lang-switcher">
+          <button class="lang-btn" data-lang="ru">RU</button>
+          <span class="lang-sep">/</span>
+          <button class="lang-btn" data-lang="en">EN</button>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -28,7 +36,7 @@
   <div id="modal-overlay" class="hidden"></div>
 
   <footer class="site-footer">
-    <p>&copy; 2024 Ольга. Все права защищены.</p>
+    <p data-i18n="footer_copy">© 2024 Ольга. Все права защищены.</p>
   </footer>
 
   <script type="module" src="./src/main.js"></script>

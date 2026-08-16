@@ -6,23 +6,17 @@ import (
 	"design-profile/backend/internal/model"
 )
 
-type contactRepo interface {
-	Get(ctx context.Context) (*model.Contacts, error)
-	Update(ctx context.Context, c *model.Contacts) (*model.Contacts, error)
-}
-
+// ContactService serves designer contact information loaded from a YAML file.
+// Contact data is immutable at runtime; edit config/about/contacts.yaml to
+// change what is shown on the public site.
 type ContactService struct {
-	repo contactRepo
+	contacts *model.Contacts
 }
 
-func NewContactService(repo contactRepo) *ContactService {
-	return &ContactService{repo: repo}
+func NewContactService(contacts *model.Contacts) *ContactService {
+	return &ContactService{contacts: contacts}
 }
 
-func (s *ContactService) Get(ctx context.Context) (*model.Contacts, error) {
-	return s.repo.Get(ctx)
-}
-
-func (s *ContactService) Update(ctx context.Context, c *model.Contacts) (*model.Contacts, error) {
-	return s.repo.Update(ctx, c)
+func (s *ContactService) Get(_ context.Context) (*model.Contacts, error) {
+	return s.contacts, nil
 }

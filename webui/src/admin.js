@@ -267,9 +267,12 @@ function renderMediaManager(project) {
           </div>`).join("")}
       </div>
       <div class="form__row">
-        <label class="form__label">Добавить фото</label>
-        <input type="file" id="add-media-input" accept="image/*" class="form__file">
-        <button class="btn btn--ghost btn--sm" id="add-media-btn">Загрузить</button>
+        <label class="form__label">Добавить фото (можно выбрать несколько)</label>
+        <input type="file" id="add-media-input" accept="image/*" multiple class="form__file">
+        <div class="upload-actions">
+          <button class="btn btn--ghost btn--sm" id="add-media-btn">Загрузить</button>
+          <span id="upload-progress" class="upload-progress hidden"></span>
+        </div>
       </div>
     </div>`;
 }
@@ -310,15 +313,30 @@ function setupMediaManager(project) {
   document.getElementById("add-media-btn").addEventListener("click", async () => {
     const input = document.getElementById("add-media-input");
     if (!input.files.length) return;
-    const fd = new FormData();
-    fd.append("media", input.files[0]);
-    try {
-      await api.projects.addMedia(project.id, fd);
-      // Reload editor
-      const full = await api.projects.get(project.id);
-      openProjectEditor(full.data);
-    } catch (err) {
-      alert("Ошибка загрузки: " + err.message);
+
+    const files = Array.from(input.files);
+    const btn = document.getElementById("add-media-btn");
+    const progress = document.getElementById("upload-progress");
+    btn.disabled = true;
+    progress.classList.remove("hidden");
+
+    const errors = [];
+    for (let i = 0; i < files.length; i++) {
+      progress.textContent = `${i + 1} / ${files.length}`;
+      const fd = new FormData();
+      fd.append("media", files[i]);
+      try {
+        await api.projects.addMedia(project.id, fd);
+      } catch (err) {
+        errors.push(`${files[i].name}: ${err.message}`);
+      }
+    }
+
+    const full = await api.projects.get(project.id);
+    openProjectEditor(full.data);
+
+    if (errors.length) {
+      alert("Ошибка при загрузке некоторых файлов:\n" + errors.join("\n"));
     }
   });
 }

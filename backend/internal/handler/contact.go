@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"design-profile/backend/internal/model"
 	"design-profile/backend/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -18,7 +17,7 @@ func NewContactHandler(svc *service.ContactService) *ContactHandler {
 
 // GetContacts godoc
 // @Summary      Get designer contacts
-// @Description  Returns the designer's public contact information.
+// @Description  Returns the designer's public contact information (sourced from config/about/contacts.yaml).
 // @Tags         contacts
 // @Produce      json
 // @Success      200  {object}  map[string]interface{}
@@ -27,41 +26,6 @@ func (h *ContactHandler) GetContacts(c *gin.Context) {
 	contacts, err := h.svc.Get(c.Request.Context())
 	if err != nil {
 		internalError(c, "failed to fetch contacts")
-		return
-	}
-	ok(c, contacts)
-}
-
-type updateContactsBody struct {
-	Telegram  string `json:"telegram"`
-	Instagram string `json:"instagram"`
-	Email     string `json:"email"`
-}
-
-// UpdateContacts godoc
-// @Summary      Update contacts (admin)
-// @Description  Updates the designer's contact information.
-// @Tags         admin
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Param        body  body      updateContactsBody  true  "Contact information"
-// @Success      200   {object}  map[string]interface{}
-// @Failure      400   {object}  map[string]string
-// @Router       /admin/contacts [put]
-func (h *ContactHandler) UpdateContacts(c *gin.Context) {
-	var body updateContactsBody
-	if err := c.ShouldBindJSON(&body); err != nil {
-		badRequest(c, err.Error())
-		return
-	}
-	contacts, err := h.svc.Update(c.Request.Context(), &model.Contacts{
-		Telegram:  body.Telegram,
-		Instagram: body.Instagram,
-		Email:     body.Email,
-	})
-	if err != nil {
-		internalError(c, "failed to update contacts")
 		return
 	}
 	ok(c, contacts)
