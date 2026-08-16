@@ -111,9 +111,12 @@ export function applyTranslations() {
   document.querySelectorAll("[data-i18n]").forEach((el) => {
     el.textContent = t(el.dataset.i18n);
   });
-  document.querySelectorAll(".lang-btn").forEach((btn) => {
-    btn.classList.toggle("lang-btn--active", btn.dataset.lang === getLang());
+  const lang = getLang();
+  document.querySelectorAll(".lang-option").forEach((btn) => {
+    btn.classList.toggle("lang-option--active", btn.dataset.lang === lang);
   });
+  const label = document.querySelector(".lang-current-label");
+  if (label) label.textContent = lang.toUpperCase();
   document.title = t("site_title");
-  document.documentElement.lang = getLang();
+  document.documentElement.lang = lang;
 }
