@@ -10,6 +10,7 @@ export const LOCALES = {
     footer_copy: `© ${YEAR} Ольга. Все права защищены.`,
 
     portfolio_empty: "Проекты появятся здесь совсем скоро.",
+    project_open_tooltip: "Перейти к проекту →",
 
     project_back: "← Назад",
     project_no_photos: "Фото будут добавлены.",
@@ -55,6 +56,7 @@ export const LOCALES = {
     footer_copy: `© ${YEAR} Olga. All rights reserved.`,
 
     portfolio_empty: "Projects will appear here soon.",
+    project_open_tooltip: "View project →",
 
     project_back: "← Back",
     project_no_photos: "Photos will be added.",
