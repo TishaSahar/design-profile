@@ -7,16 +7,26 @@ import (
 	"path/filepath"
 
 	"design-profile/backend/internal/model"
-	"design-profile/backend/internal/repository"
 
 	"github.com/google/uuid"
 )
 
-type ProjectService struct {
-	repo *repository.ProjectRepository
+type projectRepo interface {
+	List(ctx context.Context) ([]model.Project, error)
+	GetByID(ctx context.Context, id uuid.UUID) (*model.Project, error)
+	Create(ctx context.Context, title, description string) (*model.Project, error)
+	Update(ctx context.Context, id uuid.UUID, title, description string, coverMediaID *uuid.UUID) (*model.Project, error)
+	Delete(ctx context.Context, id uuid.UUID) error
+	AddMedia(ctx context.Context, projectID uuid.UUID, data []byte, contentType, filename string, sortOrder int) (*model.Media, error)
+	GetMediaData(ctx context.Context, mediaID uuid.UUID) ([]byte, string, error)
+	DeleteMedia(ctx context.Context, mediaID uuid.UUID) error
 }
 
-func NewProjectService(repo *repository.ProjectRepository) *ProjectService {
+type ProjectService struct {
+	repo projectRepo
+}
+
+func NewProjectService(repo projectRepo) *ProjectService {
 	return &ProjectService{repo: repo}
 }
 
