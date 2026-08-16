@@ -5,7 +5,7 @@ export const LOCALES = {
     site_title: "Ольга — дизайн интерьеров",
     logo: "Ольга",
     nav_portfolio: "Портфолио",
-    nav_about: "О дизайнере",
+    nav_about: "Обо мне",
     nav_contacts: "Контакты",
     footer_copy: `© ${YEAR} Ольга. Все права защищены.`,
 
@@ -21,7 +21,7 @@ export const LOCALES = {
     contacts_telegram: "Telegram",
     contacts_request_btn: "Оставить заявку на проект",
 
-    about_title: "О дизайнере",
+    about_title: "Обо мне",
     about_email: "Электронная почта",
     about_instagram: "Instagram",
     about_telegram: "Telegram",
