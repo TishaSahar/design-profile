@@ -1,0 +1,558 @@
+basePath: /api/v1
+definitions:
+  handler.requestOTPBody:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
+  handler.updateContactsBody:
+    properties:
+      email:
+        type: string
+      instagram:
+        type: string
+      telegram:
+        type: string
+    type: object
+  handler.updateProjectBody:
+    properties:
+      cover_media_id:
+        type: string
+      description:
+        type: string
+      title:
+        type: string
+    required:
+    - title
+    type: object
+  handler.verifyOTPBody:
+    properties:
+      code:
+        type: string
+      email:
+        type: string
+    required:
+    - code
+    - email
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Backend API for Olga's design portfolio.
+  title: Design Portfolio API
+  version: "1.0"
+paths:
+  /admin/contacts:
+    put:
+      consumes:
+      - application/json
+      description: Updates the designer's contact information.
+      parameters:
+      - description: Contact information
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.updateContactsBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update contacts (admin)
+      tags:
+      - admin
+  /admin/projects:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Creates a new portfolio project with optional media files.
+      parameters:
+      - description: Project title
+        in: formData
+        name: title
+        required: true
+        type: string
+      - description: Project description (max 500 chars)
+        in: formData
+        name: description
+        type: string
+      - description: Media files (images)
+        in: formData
+        name: media
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create project (admin)
+      tags:
+      - admin
+  /admin/projects/{id}:
+    delete:
+      description: Deletes a project and all its associated media.
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete project (admin)
+      tags:
+      - admin
+    put:
+      consumes:
+      - application/json
+      description: Updates a project's title, description, and cover photo.
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.updateProjectBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update project (admin)
+      tags:
+      - admin
+  /admin/projects/{id}/media:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Uploads additional image files to an existing project.
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Image file
+        in: formData
+        name: media
+        required: true
+        type: file
+      - description: Sort order
+        in: formData
+        name: sortOrder
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Add media to project (admin)
+      tags:
+      - admin
+  /admin/projects/{id}/media/{mediaId}:
+    delete:
+      description: Removes a single media file from a project.
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Media UUID
+        in: path
+        name: mediaId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete media file (admin)
+      tags:
+      - admin
+  /admin/requests:
+    get:
+      description: Returns all client project requests.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List project requests (admin)
+      tags:
+      - admin
+  /admin/requests/{id}:
+    get:
+      description: Returns a single project request with attachment metadata.
+      parameters:
+      - description: Request UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get project request (admin)
+      tags:
+      - admin
+  /admin/requests/{id}/attachments/{attachmentId}:
+    get:
+      description: Returns the binary content of a request attachment.
+      parameters:
+      - description: Request UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Attachment UUID
+        in: path
+        name: attachmentId
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Serve attachment file (admin)
+      tags:
+      - admin
+  /auth/request-otp:
+    post:
+      consumes:
+      - application/json
+      description: Sends a one-time password to the admin email address. Always returns
+        200 to prevent email enumeration.
+      parameters:
+      - description: Email address
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.requestOTPBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Request OTP
+      tags:
+      - auth
+  /auth/verify-otp:
+    post:
+      consumes:
+      - application/json
+      description: Verifies the one-time password and returns a JWT token.
+      parameters:
+      - description: Email and OTP code
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.verifyOTPBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Verify OTP
+      tags:
+      - auth
+  /contacts:
+    get:
+      description: Returns the designer's public contact information.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get designer contacts
+      tags:
+      - contacts
+  /projects:
+    get:
+      description: Returns all portfolio projects with their media metadata.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: List projects
+      tags:
+      - projects
+  /projects/{id}:
+    get:
+      description: Returns a single project with all media metadata.
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get project
+      tags:
+      - projects
+  /projects/{id}/media/{mediaId}:
+    get:
+      description: Returns the binary content of a project media file.
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Media UUID
+        in: path
+        name: mediaId
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Serve media file
+      tags:
+      - projects
+  /requests:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Submits a new client project request with optional attachments
+        (up to 10 photos or 1 PDF).
+      parameters:
+      - description: First name
+        in: formData
+        name: first_name
+        required: true
+        type: string
+      - description: Last name
+        in: formData
+        name: last_name
+        required: true
+        type: string
+      - description: Contact info (phone/email/telegram)
+        in: formData
+        name: contact
+        required: true
+        type: string
+      - description: Project description
+        in: formData
+        name: description
+        required: true
+        type: string
+      - description: Consent to personal data processing
+        in: formData
+        name: consented
+        required: true
+        type: boolean
+      - description: Attachments (up to 10 images or 1 PDF)
+        in: formData
+        name: attachments
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Submit project request
+      tags:
+      - requests
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

@@ -1,0 +1,13 @@
+# Runtime / local config (contains secrets — never commit)
+backend/config/config.yaml
+
+# Logs and PID files created by start.sh
+.logs/
+.pids/
+
+# Go build artefacts
+backend/server
+backend/*.exe
+
+# macOS
+.DS_Store
