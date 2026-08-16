@@ -48,9 +48,7 @@ h3 { font-size: 1.1rem; font-weight: 500; }
   letter-spacing: .05em;
   text-transform: uppercase;
 }
-.site-header__right { display: flex; align-items: center; gap: 2rem; }
-
-.site-nav { display: flex; gap: 2rem; }
+.site-nav { display: flex; align-items: center; gap: 2rem; }
 .site-nav__link {
   font-size: .875rem;
   letter-spacing: .04em;
@@ -70,13 +68,13 @@ h3 { font-size: 1.1rem; font-weight: 500; }
   font-weight: 300;
   letter-spacing: .09em;
   text-transform: uppercase;
-  color: #ccc;
+  color: rgba(26,26,26,.3);
   cursor: default;
   user-select: none;
   padding: .4rem .1rem;
   transition: color .2s;
 }
-.lang-switcher:hover .lang-trigger { color: #888; }
+.lang-switcher:hover .lang-trigger { color: rgba(26,26,26,.65); }
 .lang-arrow { flex-shrink: 0; color: inherit; transition: transform .2s; }
 .lang-switcher:hover .lang-arrow { transform: rotate(180deg); }
 
