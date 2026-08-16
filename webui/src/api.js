@@ -63,6 +63,7 @@ export const api = {
 
   contacts: {
     get: () => request("GET", "/contacts"),
+    photoUrl: () => `${CONFIG.BASE_URL}/about/photo`,
     update: (data) => request("PUT", "/admin/contacts", data),
   },
 

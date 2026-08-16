@@ -55,15 +55,15 @@ async function renderPortfolio(main) {
     const card = document.createElement("article");
     card.className = "card";
     card.innerHTML = `
-      <a href="#/project/${p.id}" class="card__link">
+      <a href="#/project/${p.id}" class="card__link" data-tooltip="${esc(t("project_open_tooltip"))}">
         <div class="card__img-wrap">
           ${p.cover_media_id
             ? `<img src="${api.projects.mediaUrl(p.id, p.cover_media_id)}" alt="${esc(p.title)}" loading="lazy" class="card__img">`
-            : `<div class="card__img card__img--placeholder"></div>`}
-        </div>
-        <div class="card__body">
-          <h2 class="card__title">${esc(p.title)}</h2>
-          ${p.description ? `<p class="card__desc">${esc(p.description)}</p>` : ""}
+            : `<div class="card__img--placeholder"></div>`}
+          <div class="card__overlay">
+            <h2 class="card__title">${esc(p.title)}</h2>
+            ${p.description ? `<p class="card__desc">${esc(p.description)}</p>` : ""}
+          </div>
         </div>
       </a>`;
     grid.appendChild(card);
@@ -103,8 +103,19 @@ async function renderAbout(main) {
   const result = await api.contacts.get();
   const c = result.data ?? {};
 
+  const bioHTML = (c.bio || "")
+    .split(/\n{2,}/)
+    .filter(Boolean)
+    .map((para) => `<p>${esc(para).replace(/\n/g, "<br>")}</p>`)
+    .join("");
+
   main.innerHTML = `
     <section class="about">
+      ${c.photo_url ? `
+        <div class="about__hero">
+          <img src="${api.contacts.photoUrl()}" alt="" class="about__photo">
+        </div>` : ""}
+      ${bioHTML ? `<div class="about__bio">${bioHTML}</div>` : ""}
       <h1 class="about__title">${t("about_title")}</h1>
       <div class="about__directory">
         ${c.email ? `
