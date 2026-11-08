@@ -26,7 +26,10 @@ func NewRequestHandler(svc *service.RequestService) *RequestHandler {
 // @Produce      json
 // @Param        first_name   formData  string  true  "First name"
 // @Param        last_name    formData  string  true  "Last name"
-// @Param        contact      formData  string  true  "Contact info (phone/email/telegram)"
+// @Param        email        formData  string  true  "E-mail"
+// @Param        phone        formData  string  false "Phone number"
+// @Param        telegram     formData  string  false "Telegram account"
+// @Param        preferred_contact  formData  string  false  "Preferred contact method: email, phone or telegram (must be filled in; defaults to email)"
 // @Param        description  formData  string  true  "Project description"
 // @Param        consented    formData  bool    true  "Consent to personal data processing"
 // @Param        attachments  formData  file    false "Attachments (up to 10 images or 1 PDF)"
@@ -34,18 +37,15 @@ func NewRequestHandler(svc *service.RequestService) *RequestHandler {
 // @Failure      400  {object}  map[string]string
 // @Router       /requests [post]
 func (h *RequestHandler) CreateRequest(c *gin.Context) {
-	firstName := c.PostForm("first_name")
-	lastName := c.PostForm("last_name")
-	contact := c.PostForm("contact")
-	description := c.PostForm("description")
-	consented := c.PostForm("consented") == "true" || c.PostForm("consented") == "1"
-
 	input := service.CreateRequestInput{
-		FirstName:   firstName,
-		LastName:    lastName,
-		Contact:     contact,
-		Description: description,
-		Consented:   consented,
+		FirstName:        c.PostForm("first_name"),
+		LastName:         c.PostForm("last_name"),
+		Email:            c.PostForm("email"),
+		Phone:            c.PostForm("phone"),
+		Telegram:         c.PostForm("telegram"),
+		PreferredContact: c.PostForm("preferred_contact"),
+		Description:      c.PostForm("description"),
+		Consented:        c.PostForm("consented") == "true" || c.PostForm("consented") == "1",
 	}
 
 	form, _ := c.MultipartForm()

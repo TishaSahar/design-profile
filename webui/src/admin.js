@@ -355,12 +355,28 @@ async function renderRequests(content) {
           <div class="admin-list__row">
             <div>
               <strong>${esc(r.first_name)} ${esc(r.last_name)}</strong>
-              <span class="admin-list__meta">${esc(r.contact)} — ${new Date(r.created_at).toLocaleDateString("ru-RU")}</span>
+              <span class="admin-list__meta">${esc(r[r.preferred_contact] || r.contact)} — ${new Date(r.created_at).toLocaleDateString("ru-RU")}</span>
             </div>
             <a href="#/requests/${r.id}" class="btn btn--ghost btn--sm">Открыть</a>
           </div>`).join("")}
       </div>
     </div>`;
+}
+
+const REQUEST_CONTACT_LABELS = { email: "E-mail", phone: "Телефон", telegram: "Telegram" };
+
+function requestContactRows(r) {
+  // Requests created before the separate fields existed only have `contact`.
+  if (!r.email) return `<dt>Контакт</dt><dd>${esc(r.contact)}</dd>`;
+
+  return Object.entries(REQUEST_CONTACT_LABELS)
+    .filter(([key]) => r[key])
+    .map(([key, label]) => `
+      <dt>${label}</dt>
+      <dd>${esc(r[key])}${r.preferred_contact === key
+        ? ` <span class="request-detail__badge">предпочтительный</span>`
+        : ""}</dd>`)
+    .join("");
 }
 
 async function renderRequest(content, id) {
@@ -385,7 +401,7 @@ async function renderRequest(content, id) {
       <div class="request-detail">
         <h2>${esc(r.first_name)} ${esc(r.last_name)}</h2>
         <dl class="request-detail__meta">
-          <dt>Контакт</dt><dd>${esc(r.contact)}</dd>
+          ${requestContactRows(r)}
           <dt>Дата</dt><dd>${new Date(r.created_at).toLocaleString("ru-RU")}</dd>
           <dt>Согласие на обработку данных</dt><dd>${r.consented ? "Да" : "Нет"}</dd>
         </dl>

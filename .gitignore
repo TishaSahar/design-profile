@@ -1,6 +1,9 @@
 # Runtime / local config (contains secrets — never commit)
 backend/config/config.yaml
 
+# Claude Code metadata (settings, worktrees, launch configs)
+.claude/
+
 # Logs and PID files created by start.sh
 .logs/
 .pids/

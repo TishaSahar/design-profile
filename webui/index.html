@@ -6,19 +6,22 @@
   <title>Ольга — дизайн интерьеров</title>
   <meta name="description" content="Портфолио дизайнера интерьеров Ольги. Посмотрите проекты и оставьте заявку.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./src/styles/main.css">
 </head>
 <body>
   <header class="site-header">
     <div class="site-header__inner">
+      <nav class="site-nav site-nav--left">
+        <a href="#/" class="site-nav__link" data-page="portfolio" data-i18n="nav_portfolio">Портфолио</a>
+        <a href="#/about" class="site-nav__link" data-page="about" data-i18n="nav_about">Обо мне</a>
+      </nav>
       <a href="#/" class="site-header__logo" data-i18n="logo">Ольга</a>
-      <nav class="site-nav">
-        <a href="#/" class="site-nav__link" data-i18n="nav_portfolio">Портфолио</a>
-        <a href="#/about" class="site-nav__link" data-i18n="nav_about">Обо мне</a>
-        <a href="#/contacts" class="site-nav__link" data-i18n="nav_contacts">Контакты</a>
+      <nav class="site-nav site-nav--right">
+        <a href="#/contacts" class="site-nav__link" data-page="contacts" data-i18n="nav_contacts">Контакты</a>
         <div class="lang-switcher">
-          <span class="lang-trigger">
+          <span class="lang-trigger" tabindex="0" role="button" aria-haspopup="true" aria-label="Язык / Language">
             <span class="lang-current-label">RU</span>
             <svg width="9" height="5" viewBox="0 0 9 5" class="lang-arrow" aria-hidden="true">
               <path d="M1 1l3.5 3L8 1" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
