@@ -7,15 +7,6 @@ definitions:
     required:
     - email
     type: object
-  handler.updateContactsBody:
-    properties:
-      email:
-        type: string
-      instagram:
-        type: string
-      telegram:
-        type: string
-    type: object
   handler.updateProjectBody:
     properties:
       cover_media_id:
@@ -44,37 +35,19 @@ info:
   title: Design Portfolio API
   version: "1.0"
 paths:
-  /admin/contacts:
-    put:
-      consumes:
-      - application/json
-      description: Updates the designer's contact information.
-      parameters:
-      - description: Contact information
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/handler.updateContactsBody'
+  /about/photo:
+    get:
+      description: Returns the designer's profile photo from config/about/.
       produces:
-      - application/json
+      - image/jpeg
       responses:
         "200":
           description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Update contacts (admin)
+        "404":
+          description: Not Found
+      summary: Get designer profile photo
       tags:
-      - admin
+      - contacts
   /admin/projects:
     post:
       consumes:
@@ -405,7 +378,8 @@ paths:
       - auth
   /contacts:
     get:
-      description: Returns the designer's public contact information.
+      description: Returns the designer's public contact information (sourced from
+        config/about/contacts.yaml and bio.txt).
       produces:
       - application/json
       responses:
@@ -514,10 +488,23 @@ paths:
         name: last_name
         required: true
         type: string
-      - description: Contact info (phone/email/telegram)
+      - description: E-mail
         in: formData
-        name: contact
+        name: email
         required: true
+        type: string
+      - description: Phone number
+        in: formData
+        name: phone
+        type: string
+      - description: Telegram account
+        in: formData
+        name: telegram
+        type: string
+      - description: 'Preferred contact method: email, phone or telegram (must be
+          filled in; defaults to email)'
+        in: formData
+        name: preferred_contact
         type: string
       - description: Project description
         in: formData

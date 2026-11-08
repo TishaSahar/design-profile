@@ -15,51 +15,22 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/admin/contacts": {
-            "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Updates the designer's contact information.",
-                "consumes": [
-                    "application/json"
-                ],
+        "/about/photo": {
+            "get": {
+                "description": "Returns the designer's profile photo from config/about/.",
                 "produces": [
-                    "application/json"
+                    "image/jpeg"
                 ],
                 "tags": [
-                    "admin"
+                    "contacts"
                 ],
-                "summary": "Update contacts (admin)",
-                "parameters": [
-                    {
-                        "description": "Contact information",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handler.updateContactsBody"
-                        }
-                    }
-                ],
+                "summary": "Get designer profile photo",
                 "responses": {
                     "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
+                        "description": "OK"
                     },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
+                    "404": {
+                        "description": "Not Found"
                     }
                 }
             }
@@ -574,7 +545,7 @@ const docTemplate = `{
         },
         "/contacts": {
             "get": {
-                "description": "Returns the designer's public contact information.",
+                "description": "Returns the designer's public contact information (sourced from config/about/contacts.yaml and bio.txt).",
                 "produces": [
                     "application/json"
                 ],
@@ -743,10 +714,28 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Contact info (phone/email/telegram)",
-                        "name": "contact",
+                        "description": "E-mail",
+                        "name": "email",
                         "in": "formData",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Phone number",
+                        "name": "phone",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Telegram account",
+                        "name": "telegram",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Preferred contact method: email, phone or telegram (must be filled in; defaults to email)",
+                        "name": "preferred_contact",
+                        "in": "formData"
                     },
                     {
                         "type": "string",
@@ -798,20 +787,6 @@ const docTemplate = `{
             ],
             "properties": {
                 "email": {
-                    "type": "string"
-                }
-            }
-        },
-        "handler.updateContactsBody": {
-            "type": "object",
-            "properties": {
-                "email": {
-                    "type": "string"
-                },
-                "instagram": {
-                    "type": "string"
-                },
-                "telegram": {
                     "type": "string"
                 }
             }

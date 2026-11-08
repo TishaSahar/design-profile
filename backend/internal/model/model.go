@@ -40,14 +40,20 @@ type Media struct {
 
 // ProjectRequest represents a client's project inquiry.
 type ProjectRequest struct {
-	ID          uuid.UUID    `json:"id"          db:"id"`
-	FirstName   string       `json:"first_name"  db:"first_name"`
-	LastName    string       `json:"last_name"   db:"last_name"`
-	Contact     string       `json:"contact"     db:"contact"`
-	Description string       `json:"description" db:"description"`
-	Consented   bool         `json:"consented"   db:"consented"`
-	CreatedAt   time.Time    `json:"created_at"  db:"created_at"`
-	Attachments []Attachment `json:"attachments,omitempty" db:"-"`
+	ID        uuid.UUID `json:"id"         db:"id"`
+	FirstName string    `json:"first_name" db:"first_name"`
+	LastName  string    `json:"last_name"  db:"last_name"`
+	// Contact is the free-text contact of requests created before the
+	// dedicated fields below existed; it is empty for newer requests.
+	Contact          string       `json:"contact,omitempty"     db:"contact"`
+	Email            string       `json:"email"                 db:"email"`
+	Phone            string       `json:"phone,omitempty"       db:"phone"`
+	Telegram         string       `json:"telegram,omitempty"    db:"telegram"`
+	PreferredContact string       `json:"preferred_contact"     db:"preferred_contact"`
+	Description      string       `json:"description"           db:"description"`
+	Consented        bool         `json:"consented"             db:"consented"`
+	CreatedAt        time.Time    `json:"created_at"            db:"created_at"`
+	Attachments      []Attachment `json:"attachments,omitempty" db:"-"`
 }
 
 // Attachment represents a binary file attached to a project request.

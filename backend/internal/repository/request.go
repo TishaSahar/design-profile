@@ -10,6 +10,15 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+const requestColumns = `id, first_name, last_name, contact, email, phone, telegram,
+	preferred_contact, description, consented, created_at`
+
+// requestScanTargets returns scan destinations matching requestColumns.
+func requestScanTargets(r *model.ProjectRequest) []any {
+	return []any{&r.ID, &r.FirstName, &r.LastName, &r.Contact, &r.Email, &r.Phone, &r.Telegram,
+		&r.PreferredContact, &r.Description, &r.Consented, &r.CreatedAt}
+}
+
 type RequestRepository struct {
 	db *pgxpool.Pool
 }
@@ -22,12 +31,13 @@ func NewRequestRepository(db *pgxpool.Pool) *RequestRepository {
 func (r *RequestRepository) Create(ctx context.Context, req *model.ProjectRequest) (*model.ProjectRequest, error) {
 	result := &model.ProjectRequest{}
 	err := r.db.QueryRow(ctx,
-		`INSERT INTO project_requests (first_name, last_name, contact, description, consented)
-		 VALUES ($1, $2, $3, $4, $5)
-		 RETURNING id, first_name, last_name, contact, description, consented, created_at`,
-		req.FirstName, req.LastName, req.Contact, req.Description, req.Consented,
-	).Scan(&result.ID, &result.FirstName, &result.LastName, &result.Contact,
-		&result.Description, &result.Consented, &result.CreatedAt)
+		`INSERT INTO project_requests
+		   (first_name, last_name, email, phone, telegram, preferred_contact, description, consented)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		 RETURNING `+requestColumns,
+		req.FirstName, req.LastName, req.Email, req.Phone, req.Telegram,
+		req.PreferredContact, req.Description, req.Consented,
+	).Scan(requestScanTargets(result)...)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
@@ -52,8 +62,7 @@ func (r *RequestRepository) AddAttachment(ctx context.Context, requestID uuid.UU
 // List returns all project requests without binary attachment data.
 func (r *RequestRepository) List(ctx context.Context) ([]model.ProjectRequest, error) {
 	rows, err := r.db.Query(ctx,
-		`SELECT id, first_name, last_name, contact, description, consented, created_at
-		 FROM project_requests ORDER BY created_at DESC`,
+		`SELECT `+requestColumns+` FROM project_requests ORDER BY created_at DESC`,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("list requests: %w", err)
@@ -63,8 +72,7 @@ func (r *RequestRepository) List(ctx context.Context) ([]model.ProjectRequest, e
 	var requests []model.ProjectRequest
 	for rows.Next() {
 		var req model.ProjectRequest
-		if err := rows.Scan(&req.ID, &req.FirstName, &req.LastName, &req.Contact,
-			&req.Description, &req.Consented, &req.CreatedAt); err != nil {
+		if err := rows.Scan(requestScanTargets(&req)...); err != nil {
 			return nil, fmt.Errorf("scan request: %w", err)
 		}
 		requests = append(requests, req)
@@ -76,11 +84,9 @@ func (r *RequestRepository) List(ctx context.Context) ([]model.ProjectRequest, e
 func (r *RequestRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.ProjectRequest, error) {
 	req := &model.ProjectRequest{}
 	err := r.db.QueryRow(ctx,
-		`SELECT id, first_name, last_name, contact, description, consented, created_at
-		 FROM project_requests WHERE id = $1`,
+		`SELECT `+requestColumns+` FROM project_requests WHERE id = $1`,
 		id,
-	).Scan(&req.ID, &req.FirstName, &req.LastName, &req.Contact,
-		&req.Description, &req.Consented, &req.CreatedAt)
+	).Scan(requestScanTargets(req)...)
 	if err != nil {
 		return nil, fmt.Errorf("get request: %w", err)
 	}

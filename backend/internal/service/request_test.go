@@ -1,6 +1,7 @@
 package service
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -54,5 +55,45 @@ func TestValidateAttachments(t *testing.T) {
 
 	t.Run("accepts empty attachments", func(t *testing.T) {
 		assert.NoError(t, validateAttachments(nil))
+	})
+}
+
+func TestNormalizeContacts(t *testing.T) {
+	tests := []struct {
+		name          string
+		input         CreateRequestInput
+		wantErr       bool
+		wantPreferred string
+	}{
+		{name: "email only defaults preference to email", input: CreateRequestInput{Email: "a@b.co"}, wantPreferred: "email"},
+		{name: "keeps filled preferred method", input: CreateRequestInput{Email: "a@b.co", Telegram: "@olga", PreferredContact: "telegram"}, wantPreferred: "telegram"},
+		{name: "rejects missing email even with other contacts", input: CreateRequestInput{Phone: "+7 900 000-00-00"}, wantErr: true},
+		{name: "rejects blank email", input: CreateRequestInput{Email: "   "}, wantErr: true},
+		{name: "rejects malformed email", input: CreateRequestInput{Email: "not-an-email"}, wantErr: true},
+		{name: "rejects display-name email", input: CreateRequestInput{Email: "Olga <a@b.co>"}, wantErr: true},
+		{name: "rejects preference for empty contact", input: CreateRequestInput{Email: "a@b.co", PreferredContact: "phone"}, wantErr: true},
+		{name: "rejects whitespace-only preferred contact value", input: CreateRequestInput{Email: "a@b.co", Telegram: "  ", PreferredContact: "telegram"}, wantErr: true},
+		{name: "rejects unknown preference", input: CreateRequestInput{Email: "a@b.co", PreferredContact: "fax"}, wantErr: true},
+		{name: "rejects overlong contact", input: CreateRequestInput{Email: "a@b.co", Phone: strings.Repeat("1", maxContactLength+1)}, wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			input := tt.input
+			err := normalizeContacts(&input)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tt.wantPreferred, input.PreferredContact)
+		})
+	}
+
+	t.Run("trims surrounding whitespace", func(t *testing.T) {
+		input := CreateRequestInput{Email: " a@b.co ", Telegram: " @olga "}
+		assert.NoError(t, normalizeContacts(&input))
+		assert.Equal(t, "a@b.co", input.Email)
+		assert.Equal(t, "@olga", input.Telegram)
 	})
 }

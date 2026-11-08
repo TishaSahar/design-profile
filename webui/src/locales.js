@@ -9,6 +9,10 @@ export const LOCALES = {
     nav_contacts: "Контакты",
     footer_copy: `© ${YEAR} Ольга. Все права защищены.`,
 
+    hero_subtitle: "Дизайн интерьеров",
+    hero_cta: "Заказать проект",
+
+    portfolio_descr: "Проекты, над которыми я работала",
     portfolio_empty: "Проекты появятся здесь совсем скоро.",
     project_open_tooltip: "Перейти к проекту →",
 
@@ -17,21 +21,23 @@ export const LOCALES = {
     project_request_btn: "Оставить заявку",
 
     contacts_title: "Контакты",
+    contacts_descr: "Напишите удобным для вас способом — обсудим ваш проект",
     contacts_email: "Электронная почта",
     contacts_instagram: "Instagram",
     contacts_telegram: "Telegram",
     contacts_request_btn: "Оставить заявку на проект",
 
     about_title: "Обо мне",
-    about_email: "Электронная почта",
-    about_instagram: "Instagram",
-    about_telegram: "Telegram",
     about_request_btn: "Оставить заявку на проект",
 
     modal_title: "Заявка на проект",
     modal_first_name: "Имя *",
     modal_last_name: "Фамилия *",
-    modal_contact: "Контакт (телефон / e-mail / Telegram) *",
+    modal_email: "E-mail *",
+    modal_email_short: "E-mail",
+    modal_phone: "Телефон",
+    modal_telegram: "Telegram",
+    modal_preferred: "Предпочтительный способ связи",
     modal_description: "Описание проекта *",
     modal_files: "Приложите до 10 фото или 1 PDF с чертежами",
     modal_consent_label: "Я даю согласие на",
@@ -43,6 +49,7 @@ export const LOCALES = {
     modal_success_body: "Мы свяжемся с вами в ближайшее время.",
     modal_close: "Закрыть",
 
+    err_email: "Укажите корректный e-mail.",
     err_consent: "Необходимо согласие на обработку персональных данных.",
     err_load: "Ошибка загрузки:",
   },
@@ -55,6 +62,10 @@ export const LOCALES = {
     nav_contacts: "Contacts",
     footer_copy: `© ${YEAR} Olga. All rights reserved.`,
 
+    hero_subtitle: "Interior Design",
+    hero_cta: "Request a project",
+
+    portfolio_descr: "Projects I have worked on",
     portfolio_empty: "Projects will appear here soon.",
     project_open_tooltip: "View project →",
 
@@ -63,21 +74,23 @@ export const LOCALES = {
     project_request_btn: "Make a request",
 
     contacts_title: "Contacts",
+    contacts_descr: "Get in touch whichever way suits you — let's talk about your project",
     contacts_email: "Email",
     contacts_instagram: "Instagram",
     contacts_telegram: "Telegram",
     contacts_request_btn: "Submit a project request",
 
     about_title: "About the designer",
-    about_email: "Email",
-    about_instagram: "Instagram",
-    about_telegram: "Telegram",
     about_request_btn: "Submit a project request",
 
     modal_title: "Project Request",
     modal_first_name: "First name *",
     modal_last_name: "Last name *",
-    modal_contact: "Contact (phone / e-mail / Telegram) *",
+    modal_email: "E-mail *",
+    modal_email_short: "E-mail",
+    modal_phone: "Phone",
+    modal_telegram: "Telegram",
+    modal_preferred: "Preferred contact method",
     modal_description: "Project description *",
     modal_files: "Attach up to 10 photos or 1 PDF",
     modal_consent_label: "I consent to the",
@@ -89,6 +102,7 @@ export const LOCALES = {
     modal_success_body: "We will contact you shortly.",
     modal_close: "Close",
 
+    err_email: "Please enter a valid e-mail address.",
     err_consent: "You must consent to the processing of personal data.",
     err_load: "Loading error:",
   },

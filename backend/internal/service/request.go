@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"fmt"
+	"net/mail"
+	"strings"
 
 	"design-profile/backend/internal/model"
 
@@ -12,6 +14,11 @@ import (
 const (
 	maxPhotoAttachments = 10
 	maxAttachmentSize   = 20 * 1024 * 1024 // 20 MB per file
+	maxContactLength    = 255
+
+	contactMethodEmail    = "email"
+	contactMethodPhone    = "phone"
+	contactMethodTelegram = "telegram"
 )
 
 type requestRepo interface {
@@ -31,12 +38,15 @@ func NewRequestService(repo requestRepo) *RequestService {
 }
 
 type CreateRequestInput struct {
-	FirstName   string
-	LastName    string
-	Contact     string
-	Description string
-	Consented   bool
-	Attachments []AttachmentInput
+	FirstName        string
+	LastName         string
+	Email            string
+	Phone            string
+	Telegram         string
+	PreferredContact string
+	Description      string
+	Consented        bool
+	Attachments      []AttachmentInput
 }
 
 type AttachmentInput struct {
@@ -53,8 +63,8 @@ func (s *RequestService) Create(ctx context.Context, input CreateRequestInput) (
 	if input.FirstName == "" || input.LastName == "" {
 		return nil, fmt.Errorf("first and last name are required")
 	}
-	if input.Contact == "" {
-		return nil, fmt.Errorf("contact information is required")
+	if err := normalizeContacts(&input); err != nil {
+		return nil, err
 	}
 	if input.Description == "" {
 		return nil, fmt.Errorf("project description is required")
@@ -65,11 +75,14 @@ func (s *RequestService) Create(ctx context.Context, input CreateRequestInput) (
 	}
 
 	req, err := s.repo.Create(ctx, &model.ProjectRequest{
-		FirstName:   input.FirstName,
-		LastName:    input.LastName,
-		Contact:     input.Contact,
-		Description: input.Description,
-		Consented:   input.Consented,
+		FirstName:        input.FirstName,
+		LastName:         input.LastName,
+		Email:            input.Email,
+		Phone:            input.Phone,
+		Telegram:         input.Telegram,
+		PreferredContact: input.PreferredContact,
+		Description:      input.Description,
+		Consented:        input.Consented,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
@@ -97,6 +110,47 @@ func (s *RequestService) GetByID(ctx context.Context, id uuid.UUID) (*model.Proj
 // GetAttachmentData returns binary data for a request attachment.
 func (s *RequestService) GetAttachmentData(ctx context.Context, attachmentID uuid.UUID) ([]byte, string, error) {
 	return s.repo.GetAttachmentData(ctx, attachmentID)
+}
+
+// normalizeContacts trims the contact fields, validates them and resolves the
+// preferred contact method, which defaults to e-mail when none was chosen.
+func normalizeContacts(input *CreateRequestInput) error {
+	input.Email = strings.TrimSpace(input.Email)
+	input.Phone = strings.TrimSpace(input.Phone)
+	input.Telegram = strings.TrimSpace(input.Telegram)
+	input.PreferredContact = strings.TrimSpace(input.PreferredContact)
+
+	if input.Email == "" {
+		return fmt.Errorf("email is required")
+	}
+	// ParseAddress also accepts "Name <a@b.c>", so compare the parsed address.
+	if addr, err := mail.ParseAddress(input.Email); err != nil || addr.Address != input.Email {
+		return fmt.Errorf("email address is invalid")
+	}
+
+	methods := map[string]string{
+		contactMethodEmail:    input.Email,
+		contactMethodPhone:    input.Phone,
+		contactMethodTelegram: input.Telegram,
+	}
+	for _, value := range methods {
+		if len(value) > maxContactLength {
+			return fmt.Errorf("contact details must not exceed %d characters", maxContactLength)
+		}
+	}
+
+	if input.PreferredContact == "" {
+		input.PreferredContact = contactMethodEmail
+		return nil
+	}
+	value, known := methods[input.PreferredContact]
+	if !known {
+		return fmt.Errorf("unknown preferred contact method: %s", input.PreferredContact)
+	}
+	if value == "" {
+		return fmt.Errorf("preferred contact method must be filled in")
+	}
+	return nil
 }
 
 func validateAttachments(attachments []AttachmentInput) error {
