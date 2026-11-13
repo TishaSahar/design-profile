@@ -1,0 +1,98 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Never run two deploys at once; a newer push waits for the running one.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Backend · Unit tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache-dependency-path: backend/go.sum
+
+      - name: Run tests
+        run: go test ./... -count=1
+
+  deploy:
+    name: Deploy to VPS
+    needs: test
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      DEPLOY_ROOT: /opt/design-profile
+      RELEASE: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache-dependency-path: backend/go.sum
+
+      # Migrations and Swagger docs are embedded into the binary.
+      - name: Build backend
+        working-directory: backend
+        env:
+          CGO_ENABLED: '0'
+          GOOS: linux
+          GOARCH: ${{ vars.DEPLOY_GOARCH || 'amd64' }}
+        run: go build -ldflags="-s -w" -o ../release/server ./cmd/main
+
+      # In production nginx serves the site and proxies /api/ on the same domain.
+      - name: Prepare frontend
+        run: |
+          cp -r webui release/webui
+          printf 'const CONFIG = {\n  BASE_URL: "/api/v1",\n};\n\nexport default CONFIG;\n' > release/webui/config/config.js
+
+      - name: Configure SSH
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ vars.SSH_PORT || '22' }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          : "${SSH_HOST:?Secret SSH_HOST is not set in the production environment}"
+          : "${SSH_USER:?Secret SSH_USER is not set in the production environment}"
+          : "${SSH_PRIVATE_KEY:?Secret SSH_PRIVATE_KEY is not set in the production environment}"
+          : "${SSH_KNOWN_HOSTS:?Secret SSH_KNOWN_HOSTS is not set in the production environment}"
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          cat > ~/.ssh/config <<CONF
+          Host vps
+            HostName $SSH_HOST
+            User $SSH_USER
+            Port $SSH_PORT
+            IdentityFile ~/.ssh/deploy_key
+            IdentitiesOnly yes
+            StrictHostKeyChecking yes
+          CONF
+
+      - name: Upload release
+        run: |
+          rsync -az --delete release/ "vps:$DEPLOY_ROOT/releases/$RELEASE/"
+          # No --delete: photo.jpg exists only on the server.
+          rsync -az backend/config/about/ "vps:$DEPLOY_ROOT/shared/config/about/"
+
+      - name: Activate release
+        run: ssh vps bash -s -- "$DEPLOY_ROOT" "$RELEASE" < deploy/activate.sh
