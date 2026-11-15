@@ -105,6 +105,7 @@ func main() {
 	projectH := handler.NewProjectHandler(projectSvc)
 	requestH := handler.NewRequestHandler(requestSvc)
 	contactH := handler.NewContactHandler(contactSvc)
+	healthH := handler.NewHealthHandler(pool)
 
 	r := gin.Default()
 
@@ -123,8 +124,13 @@ func main() {
 	// Swagger UI.
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
+	// Health check: /health for the deploy script on the server itself,
+	// /api/v1/health for checks through nginx, which only proxies /api/.
+	r.GET("/health", healthH.Health)
+
 	// API v1 routes.
 	v1 := r.Group("/api/v1")
+	v1.GET("/health", healthH.Health)
 
 	// Public auth routes.
 	authGroup := v1.Group("/auth")

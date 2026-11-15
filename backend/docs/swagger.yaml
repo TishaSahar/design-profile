@@ -1,5 +1,15 @@
 basePath: /api/v1
 definitions:
+  handler.HealthResponse:
+    properties:
+      checks:
+        additionalProperties:
+          type: string
+        type: object
+      status:
+        example: ok
+        type: string
+    type: object
   handler.requestOTPBody:
     properties:
       email:
@@ -391,6 +401,25 @@ paths:
       summary: Get designer contacts
       tags:
       - contacts
+  /health:
+    get:
+      description: Reports whether the API and its dependencies (PostgreSQL) are available.
+        Returns 503 when a dependency is down. Also served at /health outside the
+        API prefix.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.HealthResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/handler.HealthResponse'
+      summary: Health check
+      tags:
+      - health
   /projects:
     get:
       description: Returns all portfolio projects with their media metadata.

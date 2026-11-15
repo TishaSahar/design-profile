@@ -57,10 +57,13 @@ jobs:
         run: go build -ldflags="-s -w" -o ../release/server ./cmd/main
 
       # In production nginx serves the site and proxies /api/ on the same domain.
+      # health.json is built last so it covers the production config.js.
       - name: Prepare frontend
         run: |
           cp -r webui release/webui
           printf 'const CONFIG = {\n  BASE_URL: "/api/v1",\n};\n\nexport default CONFIG;\n' > release/webui/config/config.js
+          bash deploy/build-webui-manifest.sh release/webui "$RELEASE"
+          cp deploy/check-webui.sh release/
 
       - name: Configure SSH
         env:
@@ -94,5 +97,9 @@ jobs:
           # No --delete: photo.jpg exists only on the server.
           rsync -az backend/config/about/ "vps:$DEPLOY_ROOT/shared/config/about/"
 
-      - name: Activate release
-        run: ssh vps bash -s -- "$DEPLOY_ROOT" "$RELEASE" < deploy/activate.sh
+      # SITE_URL (e.g. https://example.ru) is the address nginx serves the site on;
+      # without it the website is checked at http://127.0.0.1.
+      - name: Activate release and run health checks
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: ssh vps bash -s -- "$DEPLOY_ROOT" "$RELEASE" "$SITE_URL" < deploy/activate.sh
