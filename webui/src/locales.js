@@ -12,17 +12,15 @@ export const LOCALES = {
     nav_cta: "Заказать проект",
     nav_menu: "Меню",
 
-    hero_badge: "SAKHA DESIGN • Международная практика",
-    hero_meta: "Residential & Commercial • С 2018 года",
     hero_title: "Дизайн интерьеров для жизни и бизнеса",
     hero_subtitle:
       "Продуманные пространства для жизни и бизнеса. От планировки до дизайн-концепции с реальными материалами и мебелью без необходимости заказывать полный дизайн-проект.",
     hero_btn_projects: "Смотреть проекты",
     hero_btn_services: "Выбрать услугу",
-    hero_case_open: "Открыть кейс →",
     hero_photo_alt: "Интерьер, спроектированный SAKHA DESIGN",
 
-    dir_label: "Направление",
+    dir_first: "1 направление",
+    dir_second: "2 направление",
     dir_from: "от",
     dir_link: "Проекты →",
     dir_res_vertical: "Residential • Частные интерьеры",
@@ -31,16 +29,15 @@ export const LOCALES = {
       "Эргономичные планировки, кухни-гостиные, спальни, детские комнаты и приватные зоны отдыха, где каждый квадратный метр работает на ваш ежедневный комфорт и остаётся актуальным годами.",
     dir_res_photo_alt: "Жилой интерьер",
     dir_com_kicker: "Направления работы",
-    dir_com_title: "Commercial — Кафе, рестораны и HoReCa",
+    dir_com_title: "HoReCa — рестораны и кафе, мини-отели и апартаменты, магазины и офисы",
     dir_com_text:
       "Кафе, кофейни, рестораны и небольшие коммерческие пространства: продуманная логистика персонала и гостей, оптимальная посадка, барные зоны и выразительная визуальная концепция.",
-    dir_com_photo_alt: "Коммерческий интерьер",
+    dir_com_photo_alt: "Интерьер HoReCa",
 
-    projects_kicker: "03 • Портфолио",
     projects_title: "Избранные проекты",
     filter_all: "Все проекты",
     category_residential: "Residential",
-    category_commercial: "Commercial",
+    category_commercial: "HoReCa",
     projects_empty: "Проекты появятся здесь совсем скоро.",
     projects_empty_filter: "В этом направлении проектов пока нет.",
     project_open: "Открыть кейс",
@@ -50,11 +47,11 @@ export const LOCALES = {
     case_cta_btn: "Обсудить похожий проект",
     modal_close: "Закрыть",
 
-    services_kicker: "04 • Независимые этапы проектирования",
+    services_kicker: "Независимые этапы проектирования",
     services_title: "Услуги и цены",
     services_text:
       "Уникальные дизайнерские проекты для вас и вашего бизнеса. Вы можете заказать каждую услугу отдельно без необходимости покупать полный дизайн-проект. Чертежи для ремонта выполняются после согласования планировочного решения.",
-    calc_residential: "Жилой интерьер",
+    calc_residential: "Residential / Жилой интерьер",
     calc_commercial: "HoReCa / Бизнес",
     calc_area: "Площадь:",
     unit_m2: "м²",
@@ -67,7 +64,6 @@ export const LOCALES = {
       {
         id: "layout",
         tag: "01 • Независимый этап",
-        rounds: "2 круга правок",
         title: "Планировочное решение",
         text: "Продуманная организация пространства с учётом ваших потребностей и образа жизни.",
         items: [
@@ -80,7 +76,6 @@ export const LOCALES = {
       {
         id: "drawings",
         tag: "02 • После планировки",
-        rounds: "1 круг правок",
         title: "Чертежи для ремонта",
         note: "После согласования планировочного решения",
         text: "Техническая документация для реализации согласованного планировочного решения.",
@@ -100,7 +95,6 @@ export const LOCALES = {
       {
         id: "concept",
         tag: "03 • Визуал + артикулы",
-        rounds: "2 + 2 круга правок",
         title: "Дизайн-концепция",
         text: "От идеи до готового визуального решения с реальными материалами и предметами интерьера.",
         items: [
@@ -114,19 +108,19 @@ export const LOCALES = {
       },
     ],
 
-    process_kicker: "05 • Алгоритм взаимодействия",
+    process_kicker: "Алгоритм взаимодействия",
     process_title: "Процесс работы",
-    process_note: "100% дистанционный формат • Согласованное число кругов правок",
+    process_note: "100% дистанционный формат",
     process_stage: "Этап",
     process: [
       { title: "Заявка", text: "Вы оставляете заявку на сайте или в мессенджере, указываете тип объекта, площадь и интересующую услугу. Ответ в течение 24 часов." },
-      { title: "Бриф", text: "Проводим онлайн-встречу, заполняем анкету-бриф, изучаем исходный план БТИ или ваши обмеры по пошаговой инструкции." },
+      { title: "Бриф", text: "Проводим онлайн-встречу, заполняем анкету-бриф, изучаем исходную планировку." },
       { title: "Договор и оплата", text: "Фиксируем точный состав выбранной услуги, сроки и прозрачные границы ответственности в договоре перед стартом проектирования." },
       { title: "Разработка и согласование", text: "Поэтапно презентуем решения онлайн и вносим корректировки в рамках согласованного количества кругов правок (1–2 круга на этап)." },
       { title: "Передача материалов", text: "Вы получаете структурированный PDF-альбом, рабочие чертежи, визуализации и таблицу спецификации с артикулами и ссылками на покупку." },
     ],
 
-    about_kicker: "06 • Обо мне • Olga Sakha",
+    about_kicker: "Обо мне • Olga Sakha",
     about_quote: "«Каждый квадратный метр должен работать на ваш комфорт и оставаться актуальным годами»",
     about_portrait_alt: "Ольга Саха — архитектор интерьеров",
     about_interior_alt: "Интерьер, спроектированный Ольгой Саха",
@@ -136,12 +130,12 @@ export const LOCALES = {
       { label: "География", value: "Дистанционно по всему миру" },
     ],
 
-    faq_kicker: "07 • Вопросы и ответы",
+    faq_kicker: "Вопросы и ответы",
     faq_title: "Частые вопросы о работе",
     // The questions and answers themselves live in backend/config/about/faq.yaml.
     faq_text:
       "Прозрачные условия, фиксированный состав каждого этапа и честное обозначение границ ответственности перед началом проекта.",
-    contacts_kicker: "08 • Контакты",
+    contacts_kicker: "Контакты",
     contacts_title: "Обсудить проект",
     contacts_text:
       "Для заказа проекта заполните короткую форму или напишите напрямую в Telegram, Instagram или на E-mail. Мы обсудим вашу задачу и подберём оптимальный формат работы.",
@@ -226,17 +220,15 @@ export const LOCALES = {
     nav_cta: "Request a project",
     nav_menu: "Menu",
 
-    hero_badge: "SAKHA DESIGN • International practice",
-    hero_meta: "Residential & Commercial • Since 2018",
     hero_title: "Interior Design for Living & Business",
     hero_subtitle:
       "Thoughtful spaces for life and business. From space planning to a full design concept with real materials and furniture — without having to order a complete design project.",
     hero_btn_projects: "Explore projects",
     hero_btn_services: "Choose a service",
-    hero_case_open: "Open case →",
     hero_photo_alt: "Interior designed by SAKHA DESIGN",
 
-    dir_label: "Direction",
+    dir_first: "Direction 1",
+    dir_second: "Direction 2",
     dir_from: "from",
     dir_link: "Projects →",
     dir_res_vertical: "Residential • Private interiors",
@@ -245,16 +237,15 @@ export const LOCALES = {
       "Ergonomic layouts, kitchen-living rooms, bedrooms, children's rooms and private retreats where every square metre works for your everyday comfort and stays relevant for years.",
     dir_res_photo_alt: "Residential interior",
     dir_com_kicker: "Areas of work",
-    dir_com_title: "Commercial — Cafés, Restaurants & HoReCa",
+    dir_com_title: "HoReCa — Restaurants & Cafés, Mini-Hotels & Apartments, Shops & Offices",
     dir_com_text:
       "Cafés, coffee shops, restaurants and small commercial spaces: well-planned staff and guest flows, efficient seating, bar areas and an expressive visual concept.",
-    dir_com_photo_alt: "Commercial interior",
+    dir_com_photo_alt: "HoReCa interior",
 
-    projects_kicker: "03 • Portfolio",
     projects_title: "Selected projects",
     filter_all: "All projects",
     category_residential: "Residential",
-    category_commercial: "Commercial",
+    category_commercial: "HoReCa",
     projects_empty: "Projects will appear here soon.",
     projects_empty_filter: "No projects in this direction yet.",
     project_open: "Open case",
@@ -264,7 +255,7 @@ export const LOCALES = {
     case_cta_btn: "Discuss a similar project",
     modal_close: "Close",
 
-    services_kicker: "04 • Independent design stages",
+    services_kicker: "Independent design stages",
     services_title: "Services & Prices",
     services_text:
       "Bespoke design projects for you and your business. Each service can be ordered on its own — there is no need to buy a complete design project. Renovation drawings are prepared once the space plan is approved.",
@@ -281,7 +272,6 @@ export const LOCALES = {
       {
         id: "layout",
         tag: "01 • Independent stage",
-        rounds: "2 rounds of revisions",
         title: "Space planning",
         text: "A well-thought-out organisation of space that reflects your needs and lifestyle.",
         items: [
@@ -294,7 +284,6 @@ export const LOCALES = {
       {
         id: "drawings",
         tag: "02 • After the layout",
-        rounds: "1 round of revisions",
         title: "Renovation drawings",
         note: "Once the space plan is approved",
         text: "Technical documentation to build the approved space plan.",
@@ -314,7 +303,6 @@ export const LOCALES = {
       {
         id: "concept",
         tag: "03 • Visuals + product codes",
-        rounds: "2 + 2 rounds of revisions",
         title: "Design concept",
         text: "From an idea to a finished visual solution with real materials and furnishings.",
         items: [
@@ -328,19 +316,19 @@ export const LOCALES = {
       },
     ],
 
-    process_kicker: "05 • How we work together",
+    process_kicker: "How we work together",
     process_title: "Work process",
-    process_note: "100% remote • An agreed number of revision rounds",
+    process_note: "100% remote",
     process_stage: "Stage",
     process: [
       { title: "Request", text: "You leave a request on the website or in a messenger, stating the type of property, its area and the service you are interested in. You get a reply within 24 hours." },
-      { title: "Brief", text: "We hold an online meeting, fill in a brief questionnaire and study the original floor plan or your own measurements taken with step-by-step instructions." },
+      { title: "Brief", text: "We hold an online meeting, fill in a brief questionnaire and study the original layout." },
       { title: "Contract & payment", text: "Before design work starts, the contract sets out the exact scope of the chosen service, the timeline and clear boundaries of responsibility." },
       { title: "Design & approval", text: "Solutions are presented online stage by stage, and changes are made within the agreed number of revision rounds (1–2 per stage)." },
       { title: "Handover", text: "You receive a structured PDF album, working drawings, renderings and a specification table with product codes and purchase links." },
     ],
 
-    about_kicker: "06 • About me • Olga Sakha",
+    about_kicker: "About me • Olga Sakha",
     about_quote: "“Every square metre should work for your comfort and stay relevant for years”",
     about_portrait_alt: "Olga Sakha — Interior Architect",
     about_interior_alt: "Interior designed by Olga Sakha",
@@ -350,11 +338,11 @@ export const LOCALES = {
       { label: "Location", value: "Remote, worldwide" },
     ],
 
-    faq_kicker: "07 • Questions & answers",
+    faq_kicker: "Questions & answers",
     faq_title: "Frequently asked questions",
     faq_text:
       "Transparent terms, a fixed scope for every stage and clearly stated boundaries of responsibility before the project starts.",
-    contacts_kicker: "08 • Contacts",
+    contacts_kicker: "Contacts",
     contacts_title: "Discuss your project",
     contacts_text:
       "To order a project, fill in the short form or write directly via Telegram, Instagram or e-mail. We will discuss your task and find the best way to work together.",

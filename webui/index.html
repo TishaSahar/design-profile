@@ -17,7 +17,7 @@
     background is shown in its place.
       hero.jpg                   — first screen, full width
       direction-residential.jpg  — "Residential" direction block, square
-      direction-commercial.jpg   — "Commercial" direction block, portrait 3:4
+      direction-commercial.jpg   — "HoReCa" direction block, portrait 3:4
       about-portrait.jpg         — Olga's portrait in "About me", portrait 3:4
       about-interior.jpg         — large interior photo in "About me", portrait 4:5
     Project photos are not here: they are uploaded through the admin panel.
@@ -72,8 +72,8 @@
         <img src="assets/images/home/hero.jpg" alt="" data-i18n-alt="hero_photo_alt">
       </div>
       <div class="hero__meta container">
-        <span data-i18n="hero_badge">SAKHA DESIGN • Международная практика</span>
-        <span class="hero__meta-extra" data-i18n="hero_meta">Residential &amp; Commercial • С 2018 года</span>
+        <span>SAKHA DESIGN</span>
+        <span class="hero__meta-extra">Residential &amp; HoReCa • Since 2018</span>
       </div>
       <div class="hero__content">
         <h1 class="hero__title" data-i18n="hero_title">Дизайн интерьеров для жизни и бизнеса</h1>
@@ -83,14 +83,13 @@
           <a href="#services" class="btn btn--outline-light" data-i18n="hero_btn_services">Выбрать услугу</a>
         </div>
       </div>
-      <div class="hero__case container" id="hero-case" hidden></div>
     </section>
 
     <!-- ── 02. Directions ───────────────────────────────────────────────── -->
     <section class="directions">
       <a href="#projects" class="direction direction--residential" data-filter="residential">
         <div class="direction__top">
-          <span>02.1 &bull; <span data-i18n="dir_label">Направление</span></span>
+          <span data-i18n="dir_first">1 направление</span>
           <span class="direction__price" data-price-from="residential"></span>
         </div>
         <div class="direction__media">
@@ -110,12 +109,12 @@
 
       <a href="#projects" class="direction direction--commercial" data-filter="commercial">
         <div class="direction__top">
-          <span>02.2 &bull; <span data-i18n="dir_label">Направление</span></span>
+          <span data-i18n="dir_second">2 направление</span>
           <span class="direction__price" data-price-from="commercial"></span>
         </div>
         <div class="direction__center">
           <span class="kicker" data-i18n="dir_com_kicker">Направления работы</span>
-          <h2 class="direction__title direction__title--center" data-i18n="dir_com_title">Commercial — Кафе, рестораны и HoReCa</h2>
+          <h2 class="direction__title direction__title--center" data-i18n="dir_com_title">HoReCa — рестораны и кафе, мини-отели и апартаменты, магазины и офисы</h2>
           <div class="photo photo--zoom direction__photo direction__photo--portrait">
             <img src="assets/images/home/direction-commercial.jpg" alt="" data-i18n-alt="dir_com_photo_alt" loading="lazy">
           </div>
@@ -131,7 +130,6 @@
     <section class="section container" id="projects">
       <div class="section-head">
         <div>
-          <span class="kicker" data-i18n="projects_kicker">03 • Портфолио</span>
           <h2 class="section-title" data-i18n="projects_title">Избранные проекты</h2>
         </div>
         <div class="filters" id="project-filters" role="group"></div>
@@ -145,14 +143,14 @@
     <section class="services" id="services">
       <div class="container">
         <div class="services__head">
-          <span class="kicker kicker--light" data-i18n="services_kicker">04 • Независимые этапы проектирования</span>
+          <span class="kicker kicker--light" data-i18n="services_kicker">Независимые этапы проектирования</span>
           <h2 class="section-title section-title--light" data-i18n="services_title">Услуги и цены</h2>
           <p class="services__text" data-i18n="services_text"></p>
         </div>
 
         <div class="calc">
           <div class="calc__types" role="group">
-            <button class="tab tab--light" data-calc-type="residential" aria-pressed="true" data-i18n="calc_residential">Жилой интерьер</button>
+            <button class="tab tab--light" data-calc-type="residential" aria-pressed="true" data-i18n="calc_residential">Residential / Жилой интерьер</button>
             <button class="tab tab--light" data-calc-type="commercial" aria-pressed="false" data-i18n="calc_commercial">HoReCa / Бизнес</button>
           </div>
           <div class="calc__area">
@@ -170,7 +168,7 @@
     <section class="section container">
       <div class="section-head">
         <div>
-          <span class="kicker" data-i18n="process_kicker">05 • Алгоритм взаимодействия</span>
+          <span class="kicker" data-i18n="process_kicker">Алгоритм взаимодействия</span>
           <h2 class="section-title" data-i18n="process_title">Процесс работы</h2>
         </div>
         <p class="caps" data-i18n="process_note"></p>
@@ -181,7 +179,7 @@
     <!-- ── 06. About ────────────────────────────────────────────────────── -->
     <section class="about" id="about">
       <div class="container">
-        <div class="kicker about__kicker" data-i18n="about_kicker">06 • Обо мне • Olga Sakha</div>
+        <div class="kicker about__kicker" data-i18n="about_kicker">Обо мне • Olga Sakha</div>
         <div class="about__grid">
           <div class="about__main">
             <div class="about__signature">
@@ -208,7 +206,7 @@
     <!-- Questions and answers come from backend/config/about/faq.yaml. -->
     <section class="section container faq" id="faq" hidden>
       <div class="faq__intro">
-        <span class="kicker" data-i18n="faq_kicker">07 • Вопросы и ответы</span>
+        <span class="kicker" data-i18n="faq_kicker">Вопросы и ответы</span>
         <h2 class="section-title section-title--md" data-i18n="faq_title">Частые вопросы о работе</h2>
         <p class="muted" data-i18n="faq_text"></p>
       </div>
@@ -219,7 +217,7 @@
     <section class="contacts" id="contacts">
       <div class="container contacts__grid">
         <div class="contacts__info">
-          <span class="kicker" data-i18n="contacts_kicker">08 • Контакты</span>
+          <span class="kicker" data-i18n="contacts_kicker">Контакты</span>
           <h2 class="section-title" data-i18n="contacts_title">Обсудить проект</h2>
           <p class="muted" data-i18n="contacts_text"></p>
           <div class="contact-list" id="contact-list" hidden></div>

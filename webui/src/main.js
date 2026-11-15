@@ -16,6 +16,9 @@ const state = {
   filter: "all",
   calcType: "residential",
   area: 75,
+  // True once the visitor types an area into the request form: from then on the
+  // calculator no longer overwrites it.
+  formAreaEdited: false,
   faqOpen: new Set([0]),
   openProjectId: null,
   openProject: null,
@@ -67,7 +70,6 @@ function renderStatic() {
 function renderData() {
   renderFilters();
   renderProjects();
-  renderHeroCase();
   renderAbout();
   renderFaq();
   renderContacts();
@@ -238,17 +240,6 @@ function renderProjects() {
   initPhotos(grid);
 }
 
-// The newest project is featured at the bottom of the first screen.
-function renderHeroCase() {
-  const box = $("hero-case");
-  const featured = state.projects[0];
-  box.hidden = !featured;
-  if (!featured) return;
-  box.innerHTML = `
-    <span>01 / ${esc(featured.title)}</span>
-    <a href="#/project/${featured.id}">${t("hero_case_open")}</a>`;
-}
-
 // ── Project case dialog ──────────────────────────────────────────────────────
 async function openProject(id) {
   state.openProjectId = id;
@@ -305,6 +296,7 @@ function initCalculator() {
   $("area-range").addEventListener("input", (e) => {
     state.area = Number(e.target.value) || 75;
     updateEstimates();
+    syncFormArea();
   });
 }
 
@@ -314,7 +306,7 @@ function renderServices() {
     return `
       <article class="service-card ${accent ? "service-card--accent" : ""}">
         <div>
-          <div class="service-card__top"><span>${s.tag}</span><span>${s.rounds}</span></div>
+          <div class="service-card__top"><span>${s.tag}</span></div>
           <h3 class="service-card__title">${s.title}</h3>
           ${s.note ? `<p class="service-card__note">${s.note}</p>` : ""}
           <p class="service-card__text">${s.text}</p>
@@ -330,7 +322,7 @@ function renderServices() {
             </div>
           </div>
           <div class="service-card__actions">
-            <button class="btn ${accent ? "btn--accent" : "btn--dark"}" data-order="${s.id}">${t("service_choose")}</button>
+            <button class="btn btn--dark" data-order="${s.id}">${t("service_choose")}</button>
             <button class="btn btn--ghost" data-sample="${s.id}">${t("service_sample")}</button>
           </div>
         </div>
@@ -351,7 +343,7 @@ function updateEstimates() {
 function orderService(serviceId, type = state.calcType) {
   $("rf-service").value = serviceId;
   $("rf-object").value = CATEGORIES.includes(type) ? type : "residential";
-  $("rf-area").value = state.area;
+  syncFormArea();
   $("contacts").scrollIntoView();
   $("rf-first").focus({ preventScroll: true });
 }
@@ -498,8 +490,15 @@ function renderServiceOptions() {
   select.value = current;
 }
 
+// The request form takes the area chosen in the calculator, unless the visitor
+// has already set a different one in the form.
+function syncFormArea() {
+  if (!state.formAreaEdited) $("rf-area").value = state.area;
+}
+
 function initForm() {
   const form = $("request-form");
+  $("rf-area").addEventListener("input", () => { state.formAreaEdited = true; });
   form.addEventListener("input", () => {
     syncPreferredContact();
     $("form-success").hidden = true;
@@ -581,6 +580,8 @@ async function submitRequest(e) {
   try {
     await api.requests.create(fd);
     form.reset();
+    state.formAreaEdited = false;
+    syncFormArea();
     syncPreferredContact();
     $("form-success").hidden = false;
   } catch (err) {
