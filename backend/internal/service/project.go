@@ -14,12 +14,41 @@ import (
 type projectRepo interface {
 	List(ctx context.Context) ([]model.Project, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*model.Project, error)
-	Create(ctx context.Context, title, description string) (*model.Project, error)
-	Update(ctx context.Context, id uuid.UUID, title, description string, coverMediaID *uuid.UUID) (*model.Project, error)
+	Create(ctx context.Context, title, description, category string) (*model.Project, error)
+	Update(ctx context.Context, id uuid.UUID, title, description, category string, coverMediaID *uuid.UUID) (*model.Project, error)
 	Delete(ctx context.Context, id uuid.UUID) error
 	AddMedia(ctx context.Context, projectID uuid.UUID, data []byte, contentType, filename string, sortOrder int) (*model.Media, error)
 	GetMediaData(ctx context.Context, mediaID uuid.UUID) ([]byte, string, error)
 	DeleteMedia(ctx context.Context, mediaID uuid.UUID) error
+}
+
+// Project categories: the two work directions shown on the public site.
+const (
+	CategoryResidential = "residential"
+	CategoryCommercial  = "commercial"
+)
+
+// normalizeCategory defaults an empty category to residential and rejects unknown values.
+func normalizeCategory(category string) (string, error) {
+	switch category {
+	case "":
+		return CategoryResidential, nil
+	case CategoryResidential, CategoryCommercial:
+		return category, nil
+	default:
+		return "", fmt.Errorf("unknown project category: %s (allowed: %s, %s)",
+			category, CategoryResidential, CategoryCommercial)
+	}
+}
+
+func validateProject(title, description string) error {
+	if title == "" {
+		return fmt.Errorf("title is required")
+	}
+	if len(description) > 500 {
+		return fmt.Errorf("description must not exceed 500 characters")
+	}
+	return nil
 }
 
 type ProjectService struct {
@@ -38,24 +67,26 @@ func (s *ProjectService) GetByID(ctx context.Context, id uuid.UUID) (*model.Proj
 	return s.repo.GetByID(ctx, id)
 }
 
-func (s *ProjectService) Create(ctx context.Context, title, description string) (*model.Project, error) {
-	if title == "" {
-		return nil, fmt.Errorf("title is required")
+func (s *ProjectService) Create(ctx context.Context, title, description, category string) (*model.Project, error) {
+	if err := validateProject(title, description); err != nil {
+		return nil, err
 	}
-	if len(description) > 500 {
-		return nil, fmt.Errorf("description must not exceed 500 characters")
+	category, err := normalizeCategory(category)
+	if err != nil {
+		return nil, err
 	}
-	return s.repo.Create(ctx, title, description)
+	return s.repo.Create(ctx, title, description, category)
 }
 
-func (s *ProjectService) Update(ctx context.Context, id uuid.UUID, title, description string, coverMediaID *uuid.UUID) (*model.Project, error) {
-	if title == "" {
-		return nil, fmt.Errorf("title is required")
+func (s *ProjectService) Update(ctx context.Context, id uuid.UUID, title, description, category string, coverMediaID *uuid.UUID) (*model.Project, error) {
+	if err := validateProject(title, description); err != nil {
+		return nil, err
 	}
-	if len(description) > 500 {
-		return nil, fmt.Errorf("description must not exceed 500 characters")
+	category, err := normalizeCategory(category)
+	if err != nil {
+		return nil, err
 	}
-	return s.repo.Update(ctx, id, title, description, coverMediaID)
+	return s.repo.Update(ctx, id, title, description, category, coverMediaID)
 }
 
 func (s *ProjectService) Delete(ctx context.Context, id uuid.UUID) error {

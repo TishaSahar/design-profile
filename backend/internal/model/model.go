@@ -21,6 +21,7 @@ type Project struct {
 	ID           uuid.UUID  `json:"id"                     db:"id"`
 	Title        string     `json:"title"                  db:"title"`
 	Description  string     `json:"description"            db:"description"`
+	Category     string     `json:"category"               db:"category"`
 	CoverMediaID *uuid.UUID `json:"cover_media_id,omitempty" db:"cover_media_id"`
 	CreatedAt    time.Time  `json:"created_at"             db:"created_at"`
 	UpdatedAt    time.Time  `json:"updated_at"             db:"updated_at"`
@@ -66,11 +67,24 @@ type Attachment struct {
 	CreatedAt   time.Time `json:"created_at"   db:"created_at"`
 }
 
+// LocalizedText is a text in Russian with an optional English translation.
+type LocalizedText struct {
+	RU string `json:"ru"           yaml:"ru"`
+	EN string `json:"en,omitempty" yaml:"en"`
+}
+
+// FAQItem is one question and its answer in the FAQ on the public site.
+type FAQItem struct {
+	Question LocalizedText `json:"question" yaml:"question"`
+	Answer   LocalizedText `json:"answer"   yaml:"answer"`
+}
+
 // Contacts holds the designer's public contact information.
 type Contacts struct {
 	Telegram  string `json:"telegram"            db:"telegram"`
 	Instagram string `json:"instagram"           db:"instagram"`
 	Email     string `json:"email"               db:"email"`
 	Bio       string `json:"bio,omitempty"`
+	BioEn     string `json:"bio_en,omitempty"`
 	PhotoURL  string `json:"photo_url,omitempty"`
 }

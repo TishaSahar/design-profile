@@ -72,6 +72,15 @@ func main() {
 	if err != nil {
 		slog.Warn("about bio not loaded", "err", err)
 	}
+	bioEn, err := about.LoadBio(filepath.Join(aboutDir, "bio.en.txt"))
+	if err != nil {
+		slog.Warn("english about bio not loaded", "err", err)
+	}
+
+	faq, err := about.LoadFAQ(filepath.Join(aboutDir, "faq.yaml"))
+	if err != nil {
+		log.Fatalf("load faq: %v", err)
+	}
 
 	photoPath := ""
 	photoURL := ""
@@ -98,6 +107,7 @@ func main() {
 		Instagram: aboutContacts.Instagram,
 		Telegram:  aboutContacts.Telegram,
 		Bio:       bio,
+		BioEn:     bioEn,
 		PhotoURL:  photoURL,
 	}, photoPath)
 
@@ -105,6 +115,7 @@ func main() {
 	projectH := handler.NewProjectHandler(projectSvc)
 	requestH := handler.NewRequestHandler(requestSvc)
 	contactH := handler.NewContactHandler(contactSvc)
+	faqH := handler.NewFAQHandler(faq)
 	healthH := handler.NewHealthHandler(pool)
 
 	r := gin.Default()
@@ -150,6 +161,7 @@ func main() {
 	// Public contact routes.
 	v1.GET("/contacts", contactH.GetContacts)
 	v1.GET("/about/photo", contactH.ServePhoto)
+	v1.GET("/faq", faqH.ListFAQ)
 
 	// Public request submission.
 	v1.POST("/requests", requestH.CreateRequest)

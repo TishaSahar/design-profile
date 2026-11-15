@@ -1,0 +1,105 @@
+# Частые вопросы (FAQ) на сайте — раздел «07 • Вопросы и ответы».
+#
+# Как редактировать:
+#   • Вопросы показываются на сайте в том же порядке, что и здесь.
+#   • Каждый пункт начинается с «- question:», у вопроса и ответа есть ru (обязательно)
+#     и en (необязательно: если английского текста нет, показывается русский).
+#   • Ответ пишется после «|-» с новой строки, с отступом в 6 пробелов.
+#     Пустая строка внутри ответа начинает новый абзац.
+#   • Если в вопросе есть двоеточие с пробелом («: »), возьмите вопрос в кавычки.
+#
+# Шаблон нового вопроса (скопируйте и уберите «#» в начале строк):
+#
+# - question:
+#     ru: Текст вопроса?
+#     en: Question text?
+#   answer:
+#     ru: |-
+#       Текст ответа.
+#     en: |-
+#       Answer text.
+#
+# Изменения появятся на сайте после деплоя (пуш в main). Если в файле ошибка,
+# бэкенд не запустится, и деплой откатится на предыдущую версию — сайт не сломается.
+# Проверить файл до пуша: cd backend && go test ./config/about/
+
+- question:
+    ru: Как проходит удалённая работа?
+    en: How does remote work happen?
+  answer:
+    ru: |-
+      Весь процесс выстроен онлайн: мы проводим видеозвонки в Zoom/Google Meet, общаемся в удобном мессенджере (Telegram / WhatsApp), а промежуточные и финальные материалы вы получаете в структурированных PDF-альбомах и презентациях.
+    en: |-
+      The whole process runs online: we hold video calls in Zoom/Google Meet, talk in a messenger of your choice (Telegram / WhatsApp), and you receive interim and final materials as structured PDF albums and presentations.
+
+- question:
+    ru: Как сделать обмеры помещения, если мы в разных городах или странах?
+    en: How do we measure the space if we are in different cities or countries?
+  answer:
+    ru: |-
+      Для старта достаточно плана от застройщика или БТИ. Если нужно выполнить точные замеры самостоятельно, я отправляю подробную пошаговую видео- и PDF-инструкцию, как правильно снять размеры, привязки окон, стояков и высоту потолков, либо координирую местного замерщика.
+    en: |-
+      A floor plan from the developer or the property register is enough to start. If precise measurements are needed, I send detailed step-by-step video and PDF instructions on how to measure the rooms, window positions, risers and ceiling heights, or coordinate a local surveyor.
+
+- question:
+    ru: Сколько кругов правок входит в стоимость?
+    en: How many revision rounds are included in the price?
+  answer:
+    ru: |-
+      В «Планировочное решение» входят 2 круга правок. В «Чертежи для ремонта» — 1 круг правок. В «Дизайн-концепцию» — 2 круга правок на этапе коллажей и 2 круга правок на этапе 3D-модели в SketchUp. Это обеспечивает предсказуемый результат и соблюдение сроков.
+    en: |-
+      Space planning includes 2 rounds of revisions. Renovation drawings include 1 round. The design concept includes 2 rounds at the collage stage and 2 rounds at the SketchUp 3D model stage. This keeps the result predictable and the project on schedule.
+
+- question:
+    ru: Можно ли заказать только одну услугу, например только планировку или концепцию?
+    en: Can I order just one service, for example only the layout or only the concept?
+  answer:
+    ru: |-
+      Да, в этом главная особенность моей практики: все три услуги независимы. Вы можете заказать только планировочное решение или только дизайн-концепцию. Единственное технологическое правило: чертежи для ремонта выполняются после согласованной планировки.
+    en: |-
+      Yes — this is the key feature of my practice: all three services are independent. You can order only the space plan or only the design concept. The one technical rule is that renovation drawings are prepared after the layout is approved.
+
+- question:
+    ru: Подбираете ли вы реальные артикулы мебели и материалов, доступные в моей стране?
+    en: Do you select real furniture and materials available in my country?
+  answer:
+    ru: |-
+      Да. В рамках услуги «Дизайн-концепция» я подбираю реальную мебель, свет, сантехнику и отделочные материалы, доступные к заказу в вашем регионе, и оформляю ведомость с артикулами, ориентировочными ценами и прямыми ссылками.
+    en: |-
+      Yes. As part of the design concept I select real furniture, lighting, plumbing and finishing materials that can be ordered in your region and compile a schedule with product codes, approximate prices and direct links.
+
+- question:
+    ru: Какие сроки разработки каждого этапа?
+    en: How long does each stage take?
+  answer:
+    ru: |-
+      В среднем планировочное решение занимает 7–10 рабочих дней, рабочие чертежи — 10–14 рабочих дней, дизайн-концепция — 14–21 рабочий день в зависимости от площади и сложности объекта (квартира, дом или HoReCa).
+    en: |-
+      On average, space planning takes 7–10 working days, working drawings 10–14 working days and a design concept 14–21 working days, depending on the area and complexity of the property (apartment, house or HoReCa).
+
+- question:
+    ru: Работаете ли вы с нашими строителями и подрядчиками?
+    en: Do you work with our builders and contractors?
+  answer:
+    ru: |-
+      Да, я готовлю максимально подробные и понятные рабочие чертежи и развёртки стен, по которым строители и мебельщики могут точно рассчитать смету и реализовать проект без догадок.
+    en: |-
+      Yes. I prepare detailed, clear working drawings and wall elevations so builders and furniture makers can estimate costs accurately and build the project without guesswork.
+
+- question:
+    ru: Что происходит на этапе реализации?
+    en: What happens at the implementation stage?
+  answer:
+    ru: |-
+      После передачи финального альбома и спецификации у вас на руках есть полная инструкция для закупок и ремонта: последовательность работ, точные привязки розеток, света, сантехники и ссылки на все позиции.
+    en: |-
+      Once you receive the final album and specification, you have complete instructions for purchasing and renovation: the order of work, exact positions of sockets, lighting and plumbing, and links to every item.
+
+- question:
+    ru: Что не входит в стоимость услуг?
+    en: What is not included in the price?
+  answer:
+    ru: |-
+      В стоимость дистанционных услуг не входят выездной авторский надзор на стройплощадке, инженерные разделы (ОВиК, ВК, электропроект с расчётом нагрузок), а также юридическое согласование перепланировок в местных государственных инстанциях.
+    en: |-
+      Remote services do not include on-site supervision, engineering sections (HVAC, water supply and drainage, electrical design with load calculations) or legal approval of layout changes with local authorities.

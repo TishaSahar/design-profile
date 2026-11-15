@@ -31,16 +31,16 @@ func (m *mockProjectRepo) GetByID(ctx context.Context, id uuid.UUID) (*model.Pro
 	return args.Get(0).(*model.Project), args.Error(1)
 }
 
-func (m *mockProjectRepo) Create(ctx context.Context, title, description string) (*model.Project, error) {
-	args := m.Called(ctx, title, description)
+func (m *mockProjectRepo) Create(ctx context.Context, title, description, category string) (*model.Project, error) {
+	args := m.Called(ctx, title, description, category)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*model.Project), args.Error(1)
 }
 
-func (m *mockProjectRepo) Update(ctx context.Context, id uuid.UUID, title, description string, coverMediaID *uuid.UUID) (*model.Project, error) {
-	args := m.Called(ctx, id, title, description, coverMediaID)
+func (m *mockProjectRepo) Update(ctx context.Context, id uuid.UUID, title, description, category string, coverMediaID *uuid.UUID) (*model.Project, error) {
+	args := m.Called(ctx, id, title, description, category, coverMediaID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -72,13 +72,13 @@ func (m *mockProjectRepo) DeleteMedia(ctx context.Context, mediaID uuid.UUID) er
 
 func TestCreate_EmptyTitle_ReturnsError(t *testing.T) {
 	svc := NewProjectService(&mockProjectRepo{})
-	_, err := svc.Create(context.Background(), "", "some description")
+	_, err := svc.Create(context.Background(), "", "some description", "")
 	assert.Error(t, err)
 }
 
 func TestCreate_DescriptionTooLong_ReturnsError(t *testing.T) {
 	svc := NewProjectService(&mockProjectRepo{})
-	_, err := svc.Create(context.Background(), "Title", strings.Repeat("x", 501))
+	_, err := svc.Create(context.Background(), "Title", strings.Repeat("x", 501), "")
 	assert.Error(t, err)
 }
 
@@ -88,9 +88,9 @@ func TestCreate_DescriptionExactly500Chars_Allowed(t *testing.T) {
 	ctx := context.Background()
 	desc := strings.Repeat("a", 500)
 
-	repo.On("Create", ctx, "Title", desc).Return(&model.Project{ID: uuid.New()}, nil)
+	repo.On("Create", ctx, "Title", desc, "residential").Return(&model.Project{ID: uuid.New()}, nil)
 
-	_, err := svc.Create(ctx, "Title", desc)
+	_, err := svc.Create(ctx, "Title", desc, "")
 	require.NoError(t, err)
 	repo.AssertExpectations(t)
 }
@@ -106,9 +106,9 @@ func TestCreate_ValidInput_CallsRepo(t *testing.T) {
 		Description: "Nice desc",
 		CreatedAt:   time.Now(),
 	}
-	repo.On("Create", ctx, "My project", "Nice desc").Return(expected, nil)
+	repo.On("Create", ctx, "My project", "Nice desc", "commercial").Return(expected, nil)
 
-	got, err := svc.Create(ctx, "My project", "Nice desc")
+	got, err := svc.Create(ctx, "My project", "Nice desc", "commercial")
 
 	require.NoError(t, err)
 	assert.Equal(t, expected, got)
@@ -119,13 +119,13 @@ func TestCreate_ValidInput_CallsRepo(t *testing.T) {
 
 func TestUpdate_EmptyTitle_ReturnsError(t *testing.T) {
 	svc := NewProjectService(&mockProjectRepo{})
-	_, err := svc.Update(context.Background(), uuid.New(), "", "desc", nil)
+	_, err := svc.Update(context.Background(), uuid.New(), "", "desc", "", nil)
 	assert.Error(t, err)
 }
 
 func TestUpdate_DescriptionTooLong_ReturnsError(t *testing.T) {
 	svc := NewProjectService(&mockProjectRepo{})
-	_, err := svc.Update(context.Background(), uuid.New(), "Title", strings.Repeat("y", 501), nil)
+	_, err := svc.Update(context.Background(), uuid.New(), "Title", strings.Repeat("y", 501), "", nil)
 	assert.Error(t, err)
 }
 
@@ -136,12 +136,39 @@ func TestUpdate_ValidInput_CallsRepo(t *testing.T) {
 	id := uuid.New()
 
 	expected := &model.Project{ID: id, Title: "Updated"}
-	repo.On("Update", ctx, id, "Updated", "desc", (*uuid.UUID)(nil)).Return(expected, nil)
+	repo.On("Update", ctx, id, "Updated", "desc", "commercial", (*uuid.UUID)(nil)).Return(expected, nil)
 
-	got, err := svc.Update(ctx, id, "Updated", "desc", nil)
+	got, err := svc.Update(ctx, id, "Updated", "desc", "commercial", nil)
 
 	require.NoError(t, err)
 	assert.Equal(t, expected, got)
+	repo.AssertExpectations(t)
+}
+
+// ── Category ─────────────────────────────────────────────────────────────────
+
+func TestCreate_UnknownCategory_ReturnsError(t *testing.T) {
+	svc := NewProjectService(&mockProjectRepo{})
+	_, err := svc.Create(context.Background(), "Title", "desc", "office")
+	assert.Error(t, err)
+}
+
+func TestUpdate_UnknownCategory_ReturnsError(t *testing.T) {
+	svc := NewProjectService(&mockProjectRepo{})
+	_, err := svc.Update(context.Background(), uuid.New(), "Title", "desc", "Residential", nil)
+	assert.Error(t, err, "categories are case-sensitive")
+}
+
+func TestUpdate_EmptyCategory_DefaultsToResidential(t *testing.T) {
+	repo := &mockProjectRepo{}
+	svc := NewProjectService(repo)
+	ctx := context.Background()
+	id := uuid.New()
+
+	repo.On("Update", ctx, id, "Title", "desc", "residential", (*uuid.UUID)(nil)).Return(&model.Project{ID: id}, nil)
+
+	_, err := svc.Update(ctx, id, "Title", "desc", "", nil)
+	require.NoError(t, err)
 	repo.AssertExpectations(t)
 }
 

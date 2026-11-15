@@ -68,6 +68,12 @@ const docTemplate = `{
                         "in": "formData"
                     },
                     {
+                        "type": "string",
+                        "description": "Work direction: residential (default) or commercial",
+                        "name": "category",
+                        "in": "formData"
+                    },
+                    {
                         "type": "file",
                         "description": "Media files (images)",
                         "name": "media",
@@ -101,7 +107,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Updates a project's title, description, and cover photo.",
+                "description": "Updates a project's title, description, category (residential by default) and cover photo. All fields are replaced, so send the current cover_media_id to keep the cover.",
                 "consumes": [
                     "application/json"
                 ],
@@ -564,6 +570,27 @@ const docTemplate = `{
                 }
             }
         },
+        "/faq": {
+            "get": {
+                "description": "Returns the questions and answers shown on the site, in the order of config/about/faq.yaml. Each text has Russian (\"ru\") and, optionally, English (\"en\").",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "content"
+                ],
+                "summary": "List FAQ",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/health": {
             "get": {
                 "description": "Reports whether the API and its dependencies (PostgreSQL) are available. Returns 503 when a dependency is down. Also served at /health outside the API prefix.",
@@ -838,6 +865,10 @@ const docTemplate = `{
                 "title"
             ],
             "properties": {
+                "category": {
+                    "type": "string",
+                    "example": "residential"
+                },
                 "cover_media_id": {
                     "type": "string"
                 },

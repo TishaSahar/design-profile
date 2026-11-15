@@ -160,7 +160,10 @@ async function renderProjects(content) {
     const row = document.createElement("div");
     row.className = "admin-list__row";
     row.innerHTML = `
-      <span class="admin-list__name">${esc(p.title)}</span>
+      <span>
+        <span class="admin-list__name">${esc(p.title)}</span>
+        <span class="admin-list__meta">${PROJECT_CATEGORIES[p.category] ?? PROJECT_CATEGORIES.residential}</span>
+      </span>
       <div class="admin-list__actions">
         <button class="btn btn--ghost btn--sm" data-edit="${p.id}">Редактировать</button>
         <button class="btn btn--danger btn--sm" data-delete="${p.id}">Удалить</button>
@@ -189,6 +192,12 @@ async function renderProjects(content) {
   });
 }
 
+// Work directions shown as filters on the public site.
+const PROJECT_CATEGORIES = {
+  residential: "Жилой интерьер (Residential)",
+  commercial: "Коммерческий / HoReCa (Commercial)",
+};
+
 function openProjectEditor(project) {
   const editor = document.getElementById("project-editor");
   const isNew = !project;
@@ -204,6 +213,13 @@ function openProjectEditor(project) {
         <div class="form__row">
           <label class="form__label">Описание (до 500 символов)</label>
           <textarea name="description" class="form__textarea" rows="3" maxlength="500">${esc(project?.description ?? "")}</textarea>
+        </div>
+        <div class="form__row">
+          <label class="form__label">Направление</label>
+          <select name="category" class="form__input">
+            ${Object.entries(PROJECT_CATEGORIES).map(([value, label]) => `
+              <option value="${value}" ${(project?.category ?? "residential") === value ? "selected" : ""}>${label}</option>`).join("")}
+          </select>
         </div>
         ${isNew ? `
         <div class="form__row">
@@ -235,7 +251,11 @@ function openProjectEditor(project) {
       } else {
         const title = form.querySelector("[name=title]").value;
         const description = form.querySelector("[name=description]").value;
-        await api.projects.update(project.id, { title, description });
+        const category = form.querySelector("[name=category]").value;
+        // The API replaces every field, so pass the current cover to keep it.
+        await api.projects.update(project.id, {
+          title, description, category, cover_media_id: project.cover_media_id ?? null,
+        });
       }
       editor.classList.add("hidden");
       const content = document.getElementById("admin-content");
@@ -301,8 +321,10 @@ function setupMediaManager(project) {
         await api.projects.update(project.id, {
           title: project.title,
           description: project.description,
+          category: project.category,
           cover_media_id: coverId,
         });
+        project.cover_media_id = coverId;
         alert("Обложка обновлена.");
       } catch (err) {
         alert("Ошибка: " + err.message);
@@ -406,7 +428,7 @@ async function renderRequest(content, id) {
           <dt>Согласие на обработку данных</dt><dd>${r.consented ? "Да" : "Нет"}</dd>
         </dl>
         <h3>Описание проекта</h3>
-        <p>${esc(r.description)}</p>
+        <p class="request-detail__description">${esc(r.description)}</p>
         ${attachments ? `<h3>Вложения</h3><div class="attachments">${attachments}</div>` : ""}
       </div>
     </div>`;

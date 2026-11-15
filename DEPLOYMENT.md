@@ -108,15 +108,19 @@ jwt:
 4. Создайте пароль для приложения «Почта» и скопируйте 16-символьный пароль.
 5. Вставьте его в `email.password`.
 
-### `backend/config/about/` — контакты и страница «Обо мне»
+### `backend/config/about/` — контакты, «Обо мне» и FAQ
 
-Папка лежит **рядом с `config.yaml`**: бэкенд ищет её относительно пути к конфигу.
+Папка лежит **рядом с `config.yaml`**: бэкенд ищет её относительно пути к конфигу и читает файлы при старте. Файлы из Git при деплое копируются на сервер, и бэкенд перезапускается, поэтому для правки текстов достаточно закоммитить их в `main`.
 
 | Файл | Что задаёт | В Git |
 |------|------------|-------|
-| `contacts.yaml` | e-mail, Instagram, Telegram и имя файла фото | да, при деплое копируется на сервер |
-| `bio.txt` | текст страницы «Обо мне» (пустая строка — новый абзац) | да, при деплое копируется на сервер |
-| `photo.jpg` | фото для первого экрана и страницы «Обо мне» | нет, кладётся на сервер вручную |
+| `contacts.yaml` | e-mail, Instagram, Telegram | да |
+| `bio.txt`, `bio.en.txt` | текст раздела «Обо мне» на русском и английском (пустая строка — новый абзац) | да |
+| `faq.yaml` | вопросы и ответы раздела FAQ на русском и английском; формат и шаблон нового вопроса — в начале файла | да |
+
+Ошибка в `faq.yaml` (сломанный YAML, опечатка в ключе, вопрос без русского текста) не даёт бэкенду запуститься: тест `cd backend && go test ./config/about/` ловит её до пуша, а если она всё же попала на сервер, деплой откатывается на предыдущую версию.
+
+Фото главной страницы лежат не здесь, а в `webui/assets/images/home/` (имена и размеры — в `README.md` той же папки).
 
 ### `webui/config/config.js`
 
@@ -148,7 +152,7 @@ cd backend && make test
 
 1. **Тесты** — `go test ./...`; если они падают, деплой не начинается.
 2. **Сборка** — статически слинкованный бинарник `server` (миграции и Swagger встроены в него); копия `webui/` с продакшн-`config.js` и сгенерированным `health.json` (`deploy/build-webui-manifest.sh`).
-3. **Загрузка** по SSH (rsync) в `/opt/design-profile/releases/<коммит>/`; содержимое `backend/config/about/` — в `shared/config/about/` (без удаления `photo.jpg`).
+3. **Загрузка** по SSH (rsync) в `/opt/design-profile/releases/<коммит>/`; содержимое `backend/config/about/` (контакты, «Обо мне», FAQ) — в `shared/config/about/`.
 4. **Активация** — на сервере выполняется `deploy/activate.sh`:
    - ссылка `current` переключается на новый релиз, `design-backend` перезапускается;
    - проверяется бэкенд (`/health`, включая доступ к PostgreSQL) и сайт через nginx (`check-webui.sh`, см. [Проверки здоровья](#проверки-здоровья));
@@ -170,7 +174,7 @@ cd backend && make test
 └── shared/                             владелец root
     └── config/                         владелец root
         ├── config.yaml                 root:www-data, 640 — секреты, deploy их не видит
-        └── about/                      владелец deploy — contacts.yaml, bio.txt, photo.jpg
+        └── about/                      владелец deploy — contacts.yaml, bio.txt, bio.en.txt, faq.yaml
 ```
 
 | Кто | Что делает |
@@ -235,7 +239,6 @@ sudo install -o root -g www-data -m 640 ~/config.yaml /opt/design-profile/shared
 ```
 
 Используйте для сервера **новые** пароли и новый `jwt.secret`, а `server.host` установите в `127.0.0.1`.
-Фото положите в `/opt/design-profile/shared/config/about/photo.jpg`.
 
 ### 6. Сервис бэкенда
 
@@ -458,7 +461,7 @@ design-profile/
 │   │   ├── config.go             # загрузка конфигурации
 │   │   ├── config.yaml.example   # шаблон конфига
 │   │   ├── config.yaml           # локальный конфиг с секретами (не коммитится)
-│   │   └── about/                # contacts.yaml, bio.txt (+ photo.jpg на сервере)
+│   │   └── about/                # contacts.yaml, bio.txt, bio.en.txt, faq.yaml
 │   ├── docker/Dockerfile
 │   ├── docs/                     # сгенерированный Swagger (make swagger)
 │   ├── internal/
@@ -476,11 +479,14 @@ design-profile/
 │   ├── config/config.js          # URL бэкенда (в продакшне заменяется при деплое)
 │   ├── index.html                # публичный сайт
 │   ├── admin.html                # панель администратора
+│   ├── assets/images/home/       # фото главной страницы (имена — в README.md)
 │   └── src/
 │       ├── api.js                # HTTP-клиент
-│       ├── main.js               # логика публичного сайта
+│       ├── main.js               # логика публичного сайта (цены — в начале файла)
 │       ├── admin.js              # логика админ-панели
-│       ├── locales.js            # переводы RU/EN
-│       └── styles/main.css
+│       ├── locales.js            # тексты интерфейса RU/EN
+│       └── styles/
+│           ├── site.css          # стили публичного сайта
+│           └── main.css          # стили админ-панели
 └── start.sh                      # локальный запуск бэкенда и фронтенда
 ```

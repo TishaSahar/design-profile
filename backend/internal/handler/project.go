@@ -88,6 +88,7 @@ func (h *ProjectHandler) ServeMedia(c *gin.Context) {
 type createProjectBody struct {
 	Title       string `form:"title"       binding:"required"`
 	Description string `form:"description"`
+	Category    string `form:"category"`
 }
 
 // CreateProject godoc
@@ -99,6 +100,7 @@ type createProjectBody struct {
 // @Security     BearerAuth
 // @Param        title        formData  string  true   "Project title"
 // @Param        description  formData  string  false  "Project description (max 500 chars)"
+// @Param        category     formData  string  false  "Work direction: residential (default) or commercial"
 // @Param        media        formData  file    false  "Media files (images)"
 // @Success      201  {object}  map[string]interface{}
 // @Failure      400  {object}  map[string]string
@@ -110,7 +112,7 @@ func (h *ProjectHandler) CreateProject(c *gin.Context) {
 		return
 	}
 
-	project, err := h.svc.Create(c.Request.Context(), body.Title, body.Description)
+	project, err := h.svc.Create(c.Request.Context(), body.Title, body.Description, body.Category)
 	if err != nil {
 		badRequest(c, err.Error())
 		return
@@ -145,12 +147,13 @@ func (h *ProjectHandler) CreateProject(c *gin.Context) {
 type updateProjectBody struct {
 	Title        string  `json:"title"          binding:"required"`
 	Description  string  `json:"description"`
+	Category     string  `json:"category"       example:"residential"`
 	CoverMediaID *string `json:"cover_media_id"`
 }
 
 // UpdateProject godoc
 // @Summary      Update project (admin)
-// @Description  Updates a project's title, description, and cover photo.
+// @Description  Updates a project's title, description, category (residential by default) and cover photo. All fields are replaced, so send the current cover_media_id to keep the cover.
 // @Tags         admin
 // @Accept       json
 // @Produce      json
@@ -183,7 +186,7 @@ func (h *ProjectHandler) UpdateProject(c *gin.Context) {
 		coverMediaID = &parsed
 	}
 
-	project, err := h.svc.Update(c.Request.Context(), id, body.Title, body.Description, coverMediaID)
+	project, err := h.svc.Update(c.Request.Context(), id, body.Title, body.Description, body.Category, coverMediaID)
 	if err != nil {
 		badRequest(c, err.Error())
 		return
