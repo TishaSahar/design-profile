@@ -3,25 +3,45 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ольга — дизайн интерьеров</title>
-  <meta name="description" content="Портфолио дизайнера интерьеров Ольги. Посмотрите проекты и оставьте заявку.">
+  <title>OLGA SAKHA — архитектор интерьеров | SAKHA DESIGN</title>
+  <meta name="description" content="SAKHA DESIGN — дизайн интерьеров для жизни и бизнеса. Планировочные решения, чертежи для ремонта и дизайн-концепции. Ольга Саха, архитектор интерьеров.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./src/styles/main.css">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Manrope:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./src/styles/site.css">
 </head>
 <body>
+  <!--
+    Photos of the home page. Put the files into webui/assets/images/home/ with exactly
+    these names (see the README.md there for sizes); until a file exists, a neutral
+    background is shown in its place.
+      hero.jpg                   — first screen, full width
+      direction-residential.jpg  — "Residential" direction block, square
+      direction-commercial.jpg   — "Commercial" direction block, portrait 3:4
+      about-portrait.jpg         — Olga's portrait in "About me", portrait 3:4
+      about-interior.jpg         — large interior photo in "About me", portrait 4:5
+    Project photos are not here: they are uploaded through the admin panel.
+  -->
+
+  <!-- ── Header ─────────────────────────────────────────────────────────── -->
   <header class="site-header">
     <div class="site-header__inner">
-      <nav class="site-nav site-nav--left">
-        <a href="#/" class="site-nav__link" data-page="portfolio" data-i18n="nav_portfolio">Портфолио</a>
-        <a href="#/about" class="site-nav__link" data-page="about" data-i18n="nav_about">Обо мне</a>
+      <nav class="site-nav" aria-label="Main">
+        <a href="#projects" class="site-nav__link" data-i18n="nav_projects">Проекты</a>
+        <a href="#services" class="site-nav__link" data-i18n="nav_services">Услуги</a>
+        <a href="#about" class="site-nav__link" data-i18n="nav_about">Обо мне</a>
+        <a href="#contacts" class="site-nav__link" data-i18n="nav_contacts">Контакты</a>
       </nav>
-      <a href="#/" class="site-header__logo" data-i18n="logo">Ольга</a>
-      <nav class="site-nav site-nav--right">
-        <a href="#/contacts" class="site-nav__link" data-page="contacts" data-i18n="nav_contacts">Контакты</a>
+      <button class="menu-toggle" id="menu-toggle" aria-expanded="false" aria-controls="mobile-menu" data-i18n="nav_menu">Меню</button>
+
+      <a href="#" class="brand">
+        <span class="brand__name">SAKHA DESIGN</span>
+        <span class="brand__role">Olga Sakha &bull; Interior Architect</span>
+      </a>
+
+      <div class="site-header__right">
         <div class="lang-switcher">
-          <span class="lang-trigger" tabindex="0" role="button" aria-haspopup="true" aria-label="Язык / Language">
+          <span class="lang-trigger" tabindex="0" role="button" aria-haspopup="true" data-i18n-aria-label="lang_label" aria-label="Язык / Language">
             <span class="lang-current-label">RU</span>
             <svg width="9" height="5" viewBox="0 0 9 5" class="lang-arrow" aria-hidden="true">
               <path d="M1 1l3.5 3L8 1" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
@@ -32,20 +52,300 @@
             <button class="lang-option" data-lang="en">English</button>
           </div>
         </div>
-      </nav>
+        <a href="#contacts" class="link-underline header-cta" data-i18n="nav_cta">Заказать проект</a>
+      </div>
     </div>
+
+    <nav class="mobile-menu" id="mobile-menu" hidden aria-label="Mobile">
+      <a href="#projects" data-i18n="nav_projects">Проекты</a>
+      <a href="#services" data-i18n="nav_services">Услуги</a>
+      <a href="#about" data-i18n="nav_about">Обо мне</a>
+      <a href="#contacts" data-i18n="nav_contacts">Контакты</a>
+      <a href="#contacts" class="mobile-menu__cta" data-i18n="nav_cta">Заказать проект</a>
+    </nav>
   </header>
 
   <main id="main">
-    <div class="loader"></div>
+    <!-- ── 01. Hero ─────────────────────────────────────────────────────── -->
+    <section class="hero">
+      <div class="photo hero__photo">
+        <img src="assets/images/home/hero.jpg" alt="" data-i18n-alt="hero_photo_alt">
+      </div>
+      <div class="hero__meta container">
+        <span data-i18n="hero_badge">SAKHA DESIGN • Международная практика</span>
+        <span class="hero__meta-extra" data-i18n="hero_meta">Residential &amp; Commercial • С 2018 года</span>
+      </div>
+      <div class="hero__content">
+        <h1 class="hero__title" data-i18n="hero_title">Дизайн интерьеров для жизни и бизнеса</h1>
+        <p class="hero__subtitle" data-i18n="hero_subtitle"></p>
+        <div class="hero__actions">
+          <a href="#projects" class="btn btn--light" data-i18n="hero_btn_projects">Смотреть проекты</a>
+          <a href="#services" class="btn btn--outline-light" data-i18n="hero_btn_services">Выбрать услугу</a>
+        </div>
+      </div>
+      <div class="hero__case container" id="hero-case" hidden></div>
+    </section>
+
+    <!-- ── 02. Directions ───────────────────────────────────────────────── -->
+    <section class="directions">
+      <a href="#projects" class="direction direction--residential" data-filter="residential">
+        <div class="direction__top">
+          <span>02.1 &bull; <span data-i18n="dir_label">Направление</span></span>
+          <span class="direction__price" data-price-from="residential"></span>
+        </div>
+        <div class="direction__media">
+          <span class="direction__vertical" data-i18n="dir_res_vertical">Residential • Частные интерьеры</span>
+          <div class="photo photo--zoom direction__photo direction__photo--square">
+            <img src="assets/images/home/direction-residential.jpg" alt="" data-i18n-alt="dir_res_photo_alt" loading="lazy">
+          </div>
+        </div>
+        <div class="direction__bottom">
+          <div>
+            <h2 class="direction__title" data-i18n="dir_res_title">Residential — Квартиры и дома</h2>
+            <p class="direction__text" data-i18n="dir_res_text"></p>
+          </div>
+          <span class="direction__link" data-i18n="dir_link">Проекты →</span>
+        </div>
+      </a>
+
+      <a href="#projects" class="direction direction--commercial" data-filter="commercial">
+        <div class="direction__top">
+          <span>02.2 &bull; <span data-i18n="dir_label">Направление</span></span>
+          <span class="direction__price" data-price-from="commercial"></span>
+        </div>
+        <div class="direction__center">
+          <span class="kicker" data-i18n="dir_com_kicker">Направления работы</span>
+          <h2 class="direction__title direction__title--center" data-i18n="dir_com_title">Commercial — Кафе, рестораны и HoReCa</h2>
+          <div class="photo photo--zoom direction__photo direction__photo--portrait">
+            <img src="assets/images/home/direction-commercial.jpg" alt="" data-i18n-alt="dir_com_photo_alt" loading="lazy">
+          </div>
+        </div>
+        <div class="direction__bottom">
+          <p class="direction__text" data-i18n="dir_com_text"></p>
+          <span class="direction__link" data-i18n="dir_link">Проекты →</span>
+        </div>
+      </a>
+    </section>
+
+    <!-- ── 03. Projects (from the admin panel) ──────────────────────────── -->
+    <section class="section container" id="projects">
+      <div class="section-head">
+        <div>
+          <span class="kicker" data-i18n="projects_kicker">03 • Портфолио</span>
+          <h2 class="section-title" data-i18n="projects_title">Избранные проекты</h2>
+        </div>
+        <div class="filters" id="project-filters" role="group"></div>
+      </div>
+      <div class="projects-grid" id="projects-grid">
+        <div class="loader"></div>
+      </div>
+    </section>
+
+    <!-- ── 04. Services & prices ────────────────────────────────────────── -->
+    <section class="services" id="services">
+      <div class="container">
+        <div class="services__head">
+          <span class="kicker kicker--light" data-i18n="services_kicker">04 • Независимые этапы проектирования</span>
+          <h2 class="section-title section-title--light" data-i18n="services_title">Услуги и цены</h2>
+          <p class="services__text" data-i18n="services_text"></p>
+        </div>
+
+        <div class="calc">
+          <div class="calc__types" role="group">
+            <button class="tab tab--light" data-calc-type="residential" aria-pressed="true" data-i18n="calc_residential">Жилой интерьер</button>
+            <button class="tab tab--light" data-calc-type="commercial" aria-pressed="false" data-i18n="calc_commercial">HoReCa / Бизнес</button>
+          </div>
+          <div class="calc__area">
+            <label for="area-range" data-i18n="calc_area">Площадь:</label>
+            <input id="area-range" type="range" min="20" max="300" step="5" value="75">
+            <span class="calc__area-value"><span id="area-display">75</span> <span data-i18n="unit_m2">м²</span></span>
+          </div>
+        </div>
+
+        <div class="service-cards" id="service-cards"></div>
+      </div>
+    </section>
+
+    <!-- ── 05. Process ──────────────────────────────────────────────────── -->
+    <section class="section container">
+      <div class="section-head">
+        <div>
+          <span class="kicker" data-i18n="process_kicker">05 • Алгоритм взаимодействия</span>
+          <h2 class="section-title" data-i18n="process_title">Процесс работы</h2>
+        </div>
+        <p class="caps" data-i18n="process_note"></p>
+      </div>
+      <ol class="process" id="process-steps"></ol>
+    </section>
+
+    <!-- ── 06. About ────────────────────────────────────────────────────── -->
+    <section class="about" id="about">
+      <div class="container">
+        <div class="kicker about__kicker" data-i18n="about_kicker">06 • Обо мне • Olga Sakha</div>
+        <div class="about__grid">
+          <div class="about__main">
+            <div class="about__signature">
+              <h2 class="about__name">Olga Sakha</h2>
+              <div class="photo about__portrait">
+                <img src="assets/images/home/about-portrait.jpg" alt="" data-i18n-alt="about_portrait_alt" loading="lazy">
+              </div>
+              <div class="about__role">Interior Architect</div>
+            </div>
+            <div class="about__text">
+              <p class="about__quote" data-i18n="about_quote"></p>
+              <div id="about-bio"></div>
+            </div>
+            <dl class="about__facts" id="about-facts"></dl>
+          </div>
+          <div class="photo about__interior">
+            <img src="assets/images/home/about-interior.jpg" alt="" data-i18n-alt="about_interior_alt" loading="lazy">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 07. FAQ ──────────────────────────────────────────────────────── -->
+    <!-- Questions and answers come from backend/config/about/faq.yaml. -->
+    <section class="section container faq" id="faq" hidden>
+      <div class="faq__intro">
+        <span class="kicker" data-i18n="faq_kicker">07 • Вопросы и ответы</span>
+        <h2 class="section-title section-title--md" data-i18n="faq_title">Частые вопросы о работе</h2>
+        <p class="muted" data-i18n="faq_text"></p>
+      </div>
+      <div class="faq__list" id="faq-list"></div>
+    </section>
+
+    <!-- ── 08. Contacts & request form ──────────────────────────────────── -->
+    <section class="contacts" id="contacts">
+      <div class="container contacts__grid">
+        <div class="contacts__info">
+          <span class="kicker" data-i18n="contacts_kicker">08 • Контакты</span>
+          <h2 class="section-title" data-i18n="contacts_title">Обсудить проект</h2>
+          <p class="muted" data-i18n="contacts_text"></p>
+          <div class="contact-list" id="contact-list" hidden></div>
+        </div>
+
+        <form class="request-form" id="request-form" novalidate>
+          <h3 class="request-form__title" data-i18n="form_title">Заявка на расчёт и консультацию</h3>
+
+          <div class="field-grid field-grid--2">
+            <div class="field">
+              <label for="rf-first" data-i18n="form_first_name">Имя *</label>
+              <input id="rf-first" name="first_name" autocomplete="given-name" required>
+            </div>
+            <div class="field">
+              <label for="rf-last" data-i18n="form_last_name">Фамилия *</label>
+              <input id="rf-last" name="last_name" autocomplete="family-name" required>
+            </div>
+          </div>
+
+          <div class="field-grid field-grid--3">
+            <div class="field">
+              <label for="rf-email" data-i18n="form_email">E-mail *</label>
+              <input id="rf-email" name="email" type="email" autocomplete="email" required>
+            </div>
+            <div class="field">
+              <label for="rf-phone" data-i18n="form_phone">Телефон</label>
+              <input id="rf-phone" name="phone" type="tel" autocomplete="tel">
+            </div>
+            <div class="field">
+              <label for="rf-telegram" data-i18n="form_telegram">Telegram</label>
+              <input id="rf-telegram" name="telegram" placeholder="@username">
+            </div>
+          </div>
+
+          <fieldset class="field pref" id="rf-preferred" hidden>
+            <legend data-i18n="form_preferred">Предпочтительный способ связи</legend>
+            <div class="pref__options">
+              <label class="pref__option"><input type="radio" name="preferred_contact" value="email"><span data-i18n="form_email_short">E-mail</span></label>
+              <label class="pref__option"><input type="radio" name="preferred_contact" value="phone"><span data-i18n="form_phone">Телефон</span></label>
+              <label class="pref__option"><input type="radio" name="preferred_contact" value="telegram"><span data-i18n="form_telegram">Telegram</span></label>
+            </div>
+          </fieldset>
+
+          <div class="field-grid field-grid--order">
+            <div class="field">
+              <label for="rf-object" data-i18n="form_object">Тип объекта</label>
+              <select id="rf-object" name="object_type">
+                <option value="residential" data-i18n="form_object_residential">Квартира / дом</option>
+                <option value="commercial" data-i18n="form_object_commercial">Кафе / HoReCa</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="rf-service" data-i18n="form_service">Услуга</label>
+              <select id="rf-service" name="service"></select>
+            </div>
+            <div class="field">
+              <label for="rf-area" data-i18n="form_area">Площадь (м²)</label>
+              <input id="rf-area" name="area" type="number" min="10" max="2000" value="75">
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="rf-comment" data-i18n="form_comment">Комментарий или город объекта</label>
+            <textarea id="rf-comment" name="comment" rows="2" data-i18n-placeholder="form_comment_placeholder"></textarea>
+          </div>
+
+          <div class="field">
+            <label for="rf-files" data-i18n="form_files">Приложите до 10 фото или 1 PDF с чертежами</label>
+            <input id="rf-files" name="attachments" type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif,application/pdf">
+          </div>
+
+          <div class="consent">
+            <label class="consent__label">
+              <input type="checkbox" id="rf-consent">
+              <span><span data-i18n="form_consent_label">Я даю согласие на</span>
+                <button type="button" class="link-button" id="consent-toggle" aria-expanded="false" aria-controls="consent-text" data-i18n="form_consent_link">обработку персональных данных</button></span>
+            </label>
+            <p class="consent__text" id="consent-text" hidden data-i18n="form_consent_body"></p>
+          </div>
+
+          <p class="form-error" id="form-error" role="alert" hidden></p>
+
+          <div class="request-form__actions">
+            <button type="submit" class="btn btn--dark" id="form-submit" data-i18n="form_submit">Обсудить проект</button>
+          </div>
+
+          <div class="form-success" id="form-success" role="status" hidden>
+            <strong data-i18n="form_success_title">Заявка отправлена.</strong>
+            <span data-i18n="form_success_body"></span>
+          </div>
+        </form>
+      </div>
+    </section>
   </main>
 
-  <!-- Request modal -->
-  <div id="modal-overlay" class="hidden"></div>
-
   <footer class="site-footer">
-    <p data-i18n="footer_copy">© 2024 Ольга. Все права защищены.</p>
+    <div class="container">
+      <div class="site-footer__wordmark" aria-hidden="true">SAKHA DESIGN</div>
+      <div class="site-footer__meta">
+        <span data-i18n="footer_role">Olga Sakha — Interior Architect</span>
+        <span data-i18n="footer_copy"></span>
+      </div>
+    </div>
   </footer>
+
+  <!-- ── Project case modal ──────────────────────────────────────────────── -->
+  <div class="overlay" id="project-modal" hidden>
+    <div class="dialog dialog--wide" role="dialog" aria-modal="true" aria-labelledby="case-title">
+      <div class="dialog__bar">
+        <span class="caps" id="case-meta"></span>
+        <button class="dialog__close" data-close-dialog><span data-i18n="modal_close">Закрыть</span> &times;</button>
+      </div>
+      <div class="dialog__body" id="case-body"></div>
+    </div>
+  </div>
+
+  <!-- ── Service sample modal ────────────────────────────────────────────── -->
+  <div class="overlay" id="sample-modal" hidden>
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="sample-title">
+      <div class="dialog__bar">
+        <span class="caps" data-i18n="sample_kicker">Пример результата услуги</span>
+        <button class="dialog__close" data-close-dialog><span data-i18n="modal_close">Закрыть</span> &times;</button>
+      </div>
+      <div class="dialog__body" id="sample-body"></div>
+    </div>
+  </div>
 
   <script type="module" src="./src/main.js"></script>
 </body>

@@ -10,6 +10,13 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+const projectColumns = `id, title, description, category, cover_media_id, created_at, updated_at`
+
+// projectScanTargets returns scan destinations matching projectColumns.
+func projectScanTargets(p *model.Project) []any {
+	return []any{&p.ID, &p.Title, &p.Description, &p.Category, &p.CoverMediaID, &p.CreatedAt, &p.UpdatedAt}
+}
+
 type ProjectRepository struct {
 	db *pgxpool.Pool
 }
@@ -21,8 +28,7 @@ func NewProjectRepository(db *pgxpool.Pool) *ProjectRepository {
 // List returns all projects without media data.
 func (r *ProjectRepository) List(ctx context.Context) ([]model.Project, error) {
 	rows, err := r.db.Query(ctx,
-		`SELECT id, title, description, cover_media_id, created_at, updated_at
-		 FROM projects ORDER BY created_at DESC`,
+		`SELECT `+projectColumns+` FROM projects ORDER BY created_at DESC`,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("list projects: %w", err)
@@ -32,7 +38,7 @@ func (r *ProjectRepository) List(ctx context.Context) ([]model.Project, error) {
 	var projects []model.Project
 	for rows.Next() {
 		var p model.Project
-		if err := rows.Scan(&p.ID, &p.Title, &p.Description, &p.CoverMediaID, &p.CreatedAt, &p.UpdatedAt); err != nil {
+		if err := rows.Scan(projectScanTargets(&p)...); err != nil {
 			return nil, fmt.Errorf("scan project: %w", err)
 		}
 		projects = append(projects, p)
@@ -44,10 +50,9 @@ func (r *ProjectRepository) List(ctx context.Context) ([]model.Project, error) {
 func (r *ProjectRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.Project, error) {
 	p := &model.Project{}
 	err := r.db.QueryRow(ctx,
-		`SELECT id, title, description, cover_media_id, created_at, updated_at
-		 FROM projects WHERE id = $1`,
+		`SELECT `+projectColumns+` FROM projects WHERE id = $1`,
 		id,
-	).Scan(&p.ID, &p.Title, &p.Description, &p.CoverMediaID, &p.CreatedAt, &p.UpdatedAt)
+	).Scan(projectScanTargets(p)...)
 	if err != nil {
 		return nil, fmt.Errorf("get project: %w", err)
 	}
@@ -61,28 +66,28 @@ func (r *ProjectRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.P
 }
 
 // Create inserts a new project.
-func (r *ProjectRepository) Create(ctx context.Context, title, description string) (*model.Project, error) {
+func (r *ProjectRepository) Create(ctx context.Context, title, description, category string) (*model.Project, error) {
 	p := &model.Project{}
 	err := r.db.QueryRow(ctx,
-		`INSERT INTO projects (title, description) VALUES ($1, $2)
-		 RETURNING id, title, description, cover_media_id, created_at, updated_at`,
-		title, description,
-	).Scan(&p.ID, &p.Title, &p.Description, &p.CoverMediaID, &p.CreatedAt, &p.UpdatedAt)
+		`INSERT INTO projects (title, description, category) VALUES ($1, $2, $3)
+		 RETURNING `+projectColumns,
+		title, description, category,
+	).Scan(projectScanTargets(p)...)
 	if err != nil {
 		return nil, fmt.Errorf("create project: %w", err)
 	}
 	return p, nil
 }
 
-// Update modifies a project's title, description and cover.
-func (r *ProjectRepository) Update(ctx context.Context, id uuid.UUID, title, description string, coverMediaID *uuid.UUID) (*model.Project, error) {
+// Update modifies a project's title, description, category and cover.
+func (r *ProjectRepository) Update(ctx context.Context, id uuid.UUID, title, description, category string, coverMediaID *uuid.UUID) (*model.Project, error) {
 	p := &model.Project{}
 	err := r.db.QueryRow(ctx,
-		`UPDATE projects SET title = $2, description = $3, cover_media_id = $4, updated_at = NOW()
+		`UPDATE projects SET title = $2, description = $3, category = $4, cover_media_id = $5, updated_at = NOW()
 		 WHERE id = $1
-		 RETURNING id, title, description, cover_media_id, created_at, updated_at`,
-		id, title, description, coverMediaID,
-	).Scan(&p.ID, &p.Title, &p.Description, &p.CoverMediaID, &p.CreatedAt, &p.UpdatedAt)
+		 RETURNING `+projectColumns,
+		id, title, description, category, coverMediaID,
+	).Scan(projectScanTargets(p)...)
 	if err != nil {
 		return nil, fmt.Errorf("update project: %w", err)
 	}

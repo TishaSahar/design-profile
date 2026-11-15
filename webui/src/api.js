@@ -67,6 +67,10 @@ export const api = {
     update: (data) => request("PUT", "/admin/contacts", data),
   },
 
+  faq: {
+    list: () => request("GET", "/faq"),
+  },
+
   auth: {
     requestOTP: (email) => request("POST", "/auth/request-otp", { email }),
     verifyOTP: (email, code) =>

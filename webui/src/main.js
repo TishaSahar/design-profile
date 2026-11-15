@@ -1,374 +1,619 @@
 import { api } from "./api.js";
-import { t, getLang, setLang, applyTranslations } from "./locales.js";
+import { t, tRu, getLang, setLang, applyTranslations } from "./locales.js";
 
-// ── Language switcher ─────────────────────────────────────────────────────────
-document.querySelectorAll(".lang-option").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    setLang(btn.dataset.lang);
-    applyTranslations();
-    document.activeElement?.blur();
-    navigate();
-  });
-});
+// Prices in euros per m², by property type and service.
+const PRICING = {
+  residential: { layout: 7, drawings: 10, concept: 19 },
+  commercial: { layout: 9, drawings: 13, concept: 24 },
+};
+const CATEGORIES = ["residential", "commercial"];
 
-applyTranslations();
-
-// ── Router ────────────────────────────────────────────────────────────────────
-function getRoute() {
-  const hash = location.hash.replace("#", "") || "/";
-  const match = hash.match(/^\/project\/([a-f0-9-]+)/);
-  if (match) return { page: "project", id: match[1] };
-  if (hash === "/contacts") return { page: "contacts" };
-  if (hash === "/about")    return { page: "about" };
-  return { page: "portfolio" };
-}
-
-async function navigate() {
-  const route = getRoute();
-  markActiveNav(route.page);
-  const main = document.getElementById("main");
-  main.innerHTML = `<div class="loader"></div>`;
-  try {
-    if      (route.page === "project")   await renderProject(main, route.id);
-    else if (route.page === "contacts")  await renderContacts(main);
-    else if (route.page === "about")     await renderAbout(main);
-    else                                 await renderPortfolio(main);
-  } catch (err) {
-    main.innerHTML = `<p class="error">${t("err_load")} ${err.message}</p>`;
-  }
-}
-
-function markActiveNav(page) {
-  const current = page === "project" ? "portfolio" : page;
-  document.querySelectorAll(".site-nav__link").forEach((link) => {
-    if (link.dataset.page === current) link.setAttribute("aria-current", "page");
-    else link.removeAttribute("aria-current");
-  });
-}
-
-window.addEventListener("hashchange", () => {
-  window.scrollTo({ top: 0, behavior: "instant" });
-  navigate();
-});
-
-// ── Portfolio page ────────────────────────────────────────────────────────────
-async function renderPortfolio(main) {
-  const [projectsResult, contactsResult] = await Promise.all([
-    api.projects.list(),
-    api.contacts.get().catch(() => ({})),
-  ]);
-  const projects = projectsResult.data ?? [];
-  const contacts = contactsResult.data ?? {};
-  const heroPhoto = contacts.photo_url
-    ? `style="background-image: url('${api.contacts.photoUrl()}')"`
-    : "";
-
-  main.innerHTML = `
-    <section class="hero">
-      <div class="hero__bg" ${heroPhoto}></div>
-      <div class="hero__content">
-        <h1 class="hero__title">${t("logo")}</h1>
-        <p class="hero__subtitle">${t("hero_subtitle")}</p>
-        <button class="btn btn--primary btn--lg" id="open-request">${t("hero_cta")}</button>
-      </div>
-      <button class="hero__scroll" id="scroll-to-portfolio" aria-label="${t("nav_portfolio")}">
-        <svg width="38" height="18" viewBox="0 0 38 18" aria-hidden="true">
-          <path d="M1 1l18 15L37 1" stroke="currentColor" stroke-width="1.5" fill="none"/>
-        </svg>
-      </button>
-    </section>
-    <section class="section" id="portfolio">
-      <div class="section__inner">
-        <h2 class="section__title">${t("nav_portfolio")}</h2>
-        <p class="section__descr">${t("portfolio_descr")}</p>
-        ${projects.length
-          ? `<div class="grid" id="portfolio-grid"></div>`
-          : `<p class="empty">${t("portfolio_empty")}</p>`}
-      </div>
-    </section>`;
-
-  document.getElementById("open-request").addEventListener("click", openRequestModal);
-  document.getElementById("scroll-to-portfolio").addEventListener("click", () => {
-    document.getElementById("portfolio").scrollIntoView({ behavior: "smooth" });
-  });
-
-  const grid = document.getElementById("portfolio-grid");
-  for (const p of projects) {
-    const card = document.createElement("article");
-    card.className = "card";
-    card.innerHTML = `
-      <a href="#/project/${p.id}" class="card__link" data-tooltip="${esc(t("project_open_tooltip"))}">
-        <div class="card__img-wrap">
-          ${p.cover_media_id
-            ? `<img src="${api.projects.mediaUrl(p.id, p.cover_media_id)}" alt="${esc(p.title)}" loading="lazy" class="card__img">`
-            : `<div class="card__img--placeholder"></div>`}
-          <div class="card__overlay">
-            <h3 class="card__title">${esc(p.title)}</h3>
-            ${p.description ? `<p class="card__desc">${esc(p.description)}</p>` : ""}
-          </div>
-        </div>
-      </a>`;
-    grid.appendChild(card);
-  }
-}
-
-// ── Project detail page ───────────────────────────────────────────────────────
-async function renderProject(main, id) {
-  const result = await api.projects.get(id);
-  const p = result.data;
-
-  const mediaHTML = (p.media ?? [])
-    .map(
-      (m) => `
-        <div class="gallery__item">
-          <img src="${api.projects.mediaUrl(p.id, m.id)}" alt="${esc(m.filename)}" loading="lazy" class="gallery__img">
-        </div>`
-    )
-    .join("");
-
-  main.innerHTML = `
-    <section class="section section--first section--fill">
-      <div class="section__inner project">
-        <a href="#/" class="btn btn--ghost btn--sm">${t("project_back")}</a>
-        <h1 class="section__title project__title">${esc(p.title)}</h1>
-        ${p.description ? `<p class="section__descr">${esc(p.description)}</p>` : ""}
-        <div class="gallery">${mediaHTML || `<p class="empty">${t("project_no_photos")}</p>`}</div>
-        <div class="section__cta">
-          <button class="btn btn--primary" id="open-request">${t("project_request_btn")}</button>
-        </div>
-      </div>
-    </section>`;
-
-  document.getElementById("open-request").addEventListener("click", openRequestModal);
-}
-
-// ── Contact links (shared by the About & Contacts pages) ──────────────────────
-const CONTACT_ICONS = {
-  instagram: `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8">
-      <rect x="4" y="4" width="16" height="16" rx="4.5"/><circle cx="12" cy="12" r="3.6"/>
-      <circle cx="16.6" cy="7.4" r="1" fill="currentColor" stroke="none"/></svg>`,
-  telegram: `<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
-      <path d="M21.3 4.2 2.9 11.3c-.8.3-.8 1.4 0 1.7l4.5 1.5 1.8 5.5c.2.6 1 .8 1.5.4l2.6-2.2 4.6 3.4c.6.4 1.4.1 1.6-.6L22.6 5.4c.2-.8-.6-1.5-1.3-1.2ZM9.6 14.4l-.5 3.3-1.2-3.8 9.9-6.2-8.2 6.7Z"/></svg>`,
-  email: `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round">
-      <rect x="3.5" y="5.5" width="17" height="13" rx="2"/><path d="m4 7 8 6 8-6"/></svg>`,
+const state = {
+  projects: [],
+  projectsError: null,
+  contacts: {},
+  faq: [],
+  filter: "all",
+  calcType: "residential",
+  area: 75,
+  faqOpen: new Set([0]),
+  openProjectId: null,
+  openProject: null,
+  openSample: null,
 };
 
-function contactLinksHTML(c) {
-  const handle = (value) => encodeURIComponent(value.replace(/^@/, ""));
-  const links = [
-    c.instagram && { key: "instagram", href: `https://instagram.com/${handle(c.instagram)}`, value: c.instagram },
-    c.telegram && { key: "telegram", href: `https://t.me/${handle(c.telegram)}`, value: c.telegram },
-    c.email && { key: "email", href: `mailto:${c.email}`, value: c.email },
-  ].filter(Boolean);
+const $ = (id) => document.getElementById(id);
 
-  const items = links.map((link) => `
-    <a class="contact-link" href="${esc(link.href)}" aria-label="${t(`contacts_${link.key}`)}: ${esc(link.value)}"
-      ${link.key === "email" ? "" : `target="_blank" rel="noopener"`}>
-      <span class="contact-link__icon">${CONTACT_ICONS[link.key]}</span>
-      <span class="contact-link__value">${esc(link.value)}</span>
-    </a>`);
-  return `<div class="contact-links">${items.join("")}</div>`;
+// ── Bootstrap ────────────────────────────────────────────────────────────────
+applyTranslations();
+initPhotos(document);
+initLanguage();
+initMenu();
+initCalculator();
+initForm();
+initClicks();
+renderStatic();
+loadData();
+window.addEventListener("hashchange", handleHash);
+
+async function loadData() {
+  const [projects, contacts, faq] = await Promise.allSettled([
+    api.projects.list(),
+    api.contacts.get(),
+    api.faq.list(),
+  ]);
+  if (projects.status === "fulfilled") {
+    state.projects = projects.value.data ?? [];
+    state.projectsError = null;
+  } else {
+    state.projectsError = projects.reason;
+  }
+  if (contacts.status === "fulfilled") state.contacts = contacts.value.data ?? {};
+  if (faq.status === "fulfilled") state.faq = faq.value.data ?? [];
+  renderData();
+  handleHash();
 }
 
-// ── About page ────────────────────────────────────────────────────────────────
-async function renderAbout(main) {
-  const result = await api.contacts.get();
-  const c = result.data ?? {};
+// Content that comes from the dictionary only.
+function renderStatic() {
+  renderDirectionPrices();
+  renderServices();
+  renderServiceOptions();
+  renderProcess();
+  renderFacts();
+}
 
-  const bioHTML = (c.bio || "")
-    .split(/\n{2,}/)
-    .filter(Boolean)
-    .map((para) => `<p>${esc(para).replace(/\n/g, "<br>")}</p>`)
-    .join("");
+// Content that depends on the API.
+function renderData() {
+  renderFilters();
+  renderProjects();
+  renderHeroCase();
+  renderAbout();
+  renderFaq();
+  renderContacts();
+}
 
-  main.innerHTML = `
-    ${c.photo_url ? `
-      <div class="about__hero">
-        <img src="${api.contacts.photoUrl()}" alt="" class="about__photo">
+// ── Language ─────────────────────────────────────────────────────────────────
+function initLanguage() {
+  document.querySelectorAll(".lang-option").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      setLang(btn.dataset.lang);
+      applyTranslations();
+      renderStatic();
+      renderData();
+      if (state.openProject) renderCase();
+      if (state.openSample) renderSample(state.openSample);
+      document.activeElement?.blur();
+    });
+  });
+}
+
+// ── Mobile menu ──────────────────────────────────────────────────────────────
+function initMenu() {
+  const toggle = $("menu-toggle");
+  const menu = $("mobile-menu");
+  toggle.addEventListener("click", () => setMenu(menu.hidden));
+  menu.addEventListener("click", (e) => {
+    if (e.target.closest("a")) setMenu(false);
+  });
+}
+
+function setMenu(open) {
+  $("mobile-menu").hidden = !open;
+  $("menu-toggle").setAttribute("aria-expanded", String(open));
+}
+
+// ── Clicks (delegated) & keyboard ────────────────────────────────────────────
+function initClicks() {
+  document.addEventListener("click", (e) => {
+    const order = e.target.closest("[data-order]");
+    if (order) {
+      closeDialog("project-modal");
+      orderService(order.dataset.order, order.dataset.orderType);
+      return;
+    }
+    const sample = e.target.closest("[data-sample]");
+    if (sample) return openSample(sample.dataset.sample);
+
+    const filterTab = e.target.closest("[data-filter-tab]");
+    if (filterTab) return setFilter(filterTab.dataset.filterTab);
+
+    // Direction blocks are links to #projects: filter, then let the browser scroll.
+    const direction = e.target.closest("a[data-filter]");
+    if (direction) return setFilter(direction.dataset.filter);
+
+    const faq = e.target.closest("[data-faq]");
+    if (faq) return toggleFaq(faq);
+
+    const close = e.target.closest("[data-close-dialog]");
+    if (close) return closeDialog(close.closest(".overlay").id);
+    if (e.target.classList.contains("overlay")) closeDialog(e.target.id);
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    const open = [...document.querySelectorAll(".overlay:not([hidden])")].pop();
+    if (open) closeDialog(open.id);
+    setMenu(false);
+  });
+}
+
+// ── Deep links ───────────────────────────────────────────────────────────────
+// #/project/<id> opens a case; the hashes of the previous multi-page site
+// (#/, #/about, #/contacts) lead to the matching section.
+function handleHash() {
+  const match = location.hash.match(/^#\/project\/([0-9a-f-]{36})$/i);
+  if (match) return openProject(match[1]);
+
+  const legacy = { "#/about": "about", "#/contacts": "contacts" };
+  const section = legacy[location.hash];
+  if (section) {
+    history.replaceState(null, "", `#${section}`);
+    $(section).scrollIntoView();
+  } else if (location.hash === "#/") {
+    history.replaceState(null, "", location.pathname + location.search);
+  }
+}
+
+// ── Photos ───────────────────────────────────────────────────────────────────
+// A photo file that does not exist yet shows a calm coloured block instead of a
+// broken image.
+function initPhotos(root) {
+  root.querySelectorAll(".photo img").forEach((img) => {
+    const markEmpty = () => img.closest(".photo")?.classList.add("photo--empty");
+    if (img.complete && img.naturalWidth === 0) markEmpty();
+    else img.addEventListener("error", markEmpty, { once: true });
+  });
+}
+
+function photoHTML(src, alt, extraClass = "") {
+  if (!src) return `<div class="photo photo--empty ${extraClass}"></div>`;
+  return `<div class="photo ${extraClass}"><img src="${src}" alt="${esc(alt)}" loading="lazy"></div>`;
+}
+
+// ── Directions & projects ────────────────────────────────────────────────────
+function renderDirectionPrices() {
+  document.querySelectorAll("[data-price-from]").forEach((el) => {
+    const from = Math.min(...Object.values(PRICING[el.dataset.priceFrom]));
+    el.textContent = `${t("dir_from")} ${euro(from)} / ${t("unit_m2")}`;
+  });
+}
+
+function categoryOf(project) {
+  return CATEGORIES.includes(project.category) ? project.category : "residential";
+}
+
+function setFilter(filter) {
+  state.filter = filter === "all" || CATEGORIES.includes(filter) ? filter : "all";
+  renderFilters();
+  renderProjects();
+}
+
+function renderFilters() {
+  const box = $("project-filters");
+  if (!state.projects.length) {
+    box.innerHTML = "";
+    return;
+  }
+  const count = (f) => (f === "all" ? state.projects : state.projects.filter((p) => categoryOf(p) === f)).length;
+  box.innerHTML = ["all", ...CATEGORIES].map((f) => `
+    <button class="tab" data-filter-tab="${f}" aria-pressed="${state.filter === f}">
+      ${f === "all" ? t("filter_all") : t(`category_${f}`)} (${pad(count(f))})
+    </button>`).join("");
+}
+
+function renderProjects() {
+  const grid = $("projects-grid");
+  if (state.projectsError) {
+    grid.innerHTML = `<p class="error">${t("err_load")} ${esc(state.projectsError.message)}</p>`;
+    return;
+  }
+  if (!state.projects.length) {
+    grid.innerHTML = `<p class="empty">${t("projects_empty")}</p>`;
+    return;
+  }
+  const shown = state.projects.filter((p) => state.filter === "all" || categoryOf(p) === state.filter);
+  if (!shown.length) {
+    grid.innerHTML = `<p class="empty">${t("projects_empty_filter")}</p>`;
+    return;
+  }
+  grid.innerHTML = shown.map((p) => {
+    const cover = p.cover_media_id ? api.projects.mediaUrl(p.id, p.cover_media_id) : null;
+    return `
+      <article class="project-card">
+        <a href="#/project/${p.id}">
+          ${photoHTML(cover, p.title, "photo--zoom")}
+          <div class="project-card__body">
+            <div class="project-card__meta">
+              <span>${t(`category_${categoryOf(p)}`)}</span>
+              <span>${pad(state.projects.indexOf(p) + 1)}</span>
+            </div>
+            <h3 class="project-card__title">${esc(p.title)}</h3>
+            ${p.description ? `<p class="project-card__desc">${esc(p.description)}</p>` : ""}
+          </div>
+          <div class="project-card__open"><span>${t("project_open")}</span><span aria-hidden="true">→</span></div>
+        </a>
+      </article>`;
+  }).join("");
+  initPhotos(grid);
+}
+
+// The newest project is featured at the bottom of the first screen.
+function renderHeroCase() {
+  const box = $("hero-case");
+  const featured = state.projects[0];
+  box.hidden = !featured;
+  if (!featured) return;
+  box.innerHTML = `
+    <span>01 / ${esc(featured.title)}</span>
+    <a href="#/project/${featured.id}">${t("hero_case_open")}</a>`;
+}
+
+// ── Project case dialog ──────────────────────────────────────────────────────
+async function openProject(id) {
+  state.openProjectId = id;
+  state.openProject = null;
+  $("case-meta").textContent = "";
+  $("case-body").innerHTML = `<div class="loader"></div>`;
+  showDialog("project-modal");
+  try {
+    const result = await api.projects.get(id);
+    if (state.openProjectId !== id) return;
+    state.openProject = result.data;
+    renderCase();
+  } catch (err) {
+    if (state.openProjectId !== id) return;
+    $("case-body").innerHTML = `<p class="error">${t("err_load")} ${esc(err.message)}</p>`;
+  }
+}
+
+function renderCase() {
+  const p = state.openProject;
+  const media = p.media ?? [];
+  const coverId = p.cover_media_id ?? media[0]?.id;
+  const gallery = media.filter((m) => m.id !== coverId);
+
+  $("case-meta").textContent = `${t(`category_${categoryOf(p)}`)} • ${t("project_photos", media.length)}`;
+  $("case-body").innerHTML = `
+    <h3 class="dialog__title" id="case-title">${esc(p.title)}</h3>
+    ${coverId
+      ? photoHTML(api.projects.mediaUrl(p.id, coverId), p.title, "case__cover")
+      : `<p class="muted">${t("case_no_photos")}</p>`}
+    ${p.description ? `<p class="dialog__text">${esc(p.description)}</p>` : ""}
+    ${gallery.length ? `
+      <div class="case__gallery">
+        ${gallery.map((m, i) => photoHTML(api.projects.mediaUrl(p.id, m.id), `${p.title} — ${i + 2}`)).join("")}
       </div>` : ""}
-    <section class="section section--muted section--fill ${c.photo_url ? "" : "section--first"}">
-      <div class="section__inner">
-        <h1 class="section__title">${t("about_title")}</h1>
-        ${bioHTML ? `<div class="about__bio">${bioHTML}</div>` : ""}
-        ${contactLinksHTML(c)}
-        <div class="section__cta">
-          <button class="btn btn--primary" id="open-request">${t("about_request_btn")}</button>
-        </div>
-      </div>
-    </section>`;
-
-  document.getElementById("open-request").addEventListener("click", openRequestModal);
+    <div class="case__cta">
+      <span>${t("case_cta_text")}</span>
+      <button class="btn btn--dark" data-order="concept" data-order-type="${categoryOf(p)}">${t("case_cta_btn")}</button>
+    </div>`;
+  initPhotos($("case-body"));
 }
 
-// ── Contacts page ─────────────────────────────────────────────────────────────
-async function renderContacts(main) {
-  const result = await api.contacts.get();
-  const c = result.data ?? {};
-
-  main.innerHTML = `
-    <section class="section section--muted section--first section--fill">
-      <div class="section__inner">
-        <h1 class="section__title">${t("contacts_title")}</h1>
-        <p class="section__descr">${t("contacts_descr")}</p>
-        ${contactLinksHTML(c)}
-        <div class="section__cta">
-          <button class="btn btn--primary" id="open-request">${t("contacts_request_btn")}</button>
-        </div>
-      </div>
-    </section>`;
-
-  document.getElementById("open-request").addEventListener("click", openRequestModal);
+// ── Services & calculator ────────────────────────────────────────────────────
+function initCalculator() {
+  document.querySelectorAll("[data-calc-type]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.calcType = btn.dataset.calcType;
+      document.querySelectorAll("[data-calc-type]").forEach((b) => {
+        b.setAttribute("aria-pressed", String(b === btn));
+      });
+      updateEstimates();
+    });
+  });
+  $("area-range").addEventListener("input", (e) => {
+    state.area = Number(e.target.value) || 75;
+    updateEstimates();
+  });
 }
 
-// ── Request modal ─────────────────────────────────────────────────────────────
-function openRequestModal() {
-  const overlay = document.getElementById("modal-overlay");
-  overlay.classList.remove("hidden");
-  overlay.innerHTML = buildRequestForm();
-  overlay.querySelector("#close-modal").addEventListener("click", closeModal);
-  const form = overlay.querySelector("#request-form");
+function renderServices() {
+  $("service-cards").innerHTML = t("services").map((s) => {
+    const accent = s.id === "concept";
+    return `
+      <article class="service-card ${accent ? "service-card--accent" : ""}">
+        <div>
+          <div class="service-card__top"><span>${s.tag}</span><span>${s.rounds}</span></div>
+          <h3 class="service-card__title">${s.title}</h3>
+          ${s.note ? `<p class="service-card__note">${s.note}</p>` : ""}
+          <p class="service-card__text">${s.text}</p>
+          <ul class="service-card__items">${s.items.map((item) => `<li>${item}</li>`).join("")}</ul>
+        </div>
+        <div>
+          <div class="service-card__prices">
+            <div class="price-row"><span>${t("price_residential")}</span><span>${euro(PRICING.residential[s.id])} / ${t("unit_m2")}</span></div>
+            <div class="price-row"><span>${t("price_commercial")}</span><span>${euro(PRICING.commercial[s.id])} / ${t("unit_m2")}</span></div>
+            <div class="price-row price-row--total">
+              <span>${t("price_for")} <span data-area-echo>${state.area}</span> ${t("unit_m2")}</span>
+              <span data-estimate="${s.id}"></span>
+            </div>
+          </div>
+          <div class="service-card__actions">
+            <button class="btn ${accent ? "btn--accent" : "btn--dark"}" data-order="${s.id}">${t("service_choose")}</button>
+            <button class="btn btn--ghost" data-sample="${s.id}">${t("service_sample")}</button>
+          </div>
+        </div>
+      </article>`;
+  }).join("");
+  updateEstimates();
+}
+
+function updateEstimates() {
+  $("area-display").textContent = state.area;
+  document.querySelectorAll("[data-area-echo]").forEach((el) => { el.textContent = state.area; });
+  document.querySelectorAll("[data-estimate]").forEach((el) => {
+    el.textContent = euro(state.area * PRICING[state.calcType][el.dataset.estimate]);
+  });
+}
+
+// Pre-fills the request form and takes the visitor to it.
+function orderService(serviceId, type = state.calcType) {
+  $("rf-service").value = serviceId;
+  $("rf-object").value = CATEGORIES.includes(type) ? type : "residential";
+  $("rf-area").value = state.area;
+  $("contacts").scrollIntoView();
+  $("rf-first").focus({ preventScroll: true });
+}
+
+// ── Service sample dialog ────────────────────────────────────────────────────
+function openSample(type) {
+  state.openSample = type;
+  renderSample(type);
+  showDialog("sample-modal");
+}
+
+function renderSample(type) {
+  const s = t("samples")[type];
+  let body = "";
+  if (type === "layout") {
+    body = `
+      <svg viewBox="0 0 640 300" class="sample-plan" role="img" aria-label="${s.sheet}">
+        <rect x="30" y="25" width="580" height="250" fill="none" stroke="#1E1C1A" stroke-width="4"/>
+        <line x1="250" y1="25" x2="250" y2="180" stroke="#1E1C1A" stroke-width="2.5"/>
+        <line x1="250" y1="225" x2="250" y2="275" stroke="#1E1C1A" stroke-width="2.5"/>
+        <rect x="55" y="50" width="140" height="45" fill="#E4E0D8" stroke="#1E1C1A"/>
+        <rect x="290" y="50" width="290" height="85" fill="#77785E" fill-opacity="0.2" stroke="#1E1C1A"/>
+        <text x="125" y="77" font-size="11" fill="#1E1C1A" text-anchor="middle">${s.bedroom}</text>
+        <text x="435" y="96" font-size="11" fill="#1E1C1A" text-anchor="middle">${s.living}</text>
+        <text x="320" y="245" font-size="10" fill="#754044" text-anchor="middle" font-family="monospace">${s.sheet}</text>
+      </svg>`;
+  } else if (type === "drawings") {
+    body = `<div class="sample-sheets">${s.sheets.map(([sheet, text]) => `<div><strong>${sheet}</strong> ${text}</div>`).join("")}</div>`;
+  } else {
+    body = `
+      <div class="sample-table-wrap">
+        <table class="sample-table">
+          <thead><tr>${s.head.map((h) => `<th>${h}</th>`).join("")}</tr></thead>
+          <tbody>${s.rows.map((row) => `<tr>${row.map((cell) => `<td>${cell}</td>`).join("")}</tr>`).join("")}</tbody>
+        </table>
+      </div>`;
+  }
+  $("sample-body").innerHTML = `
+    <h3 class="dialog__title" id="sample-title">${s.title}</h3>
+    <p class="dialog__text">${s.text}</p>
+    ${body}`;
+}
+
+// ── Dialogs ──────────────────────────────────────────────────────────────────
+let returnFocusTo = null;
+
+function showDialog(id) {
+  const overlay = $(id);
+  if (overlay.hidden) returnFocusTo = document.activeElement;
+  overlay.hidden = false;
+  document.body.classList.add("is-locked");
+  overlay.querySelector("[data-close-dialog]").focus();
+}
+
+function closeDialog(id) {
+  const overlay = $(id);
+  if (overlay.hidden) return;
+  overlay.hidden = true;
+  if (!document.querySelector(".overlay:not([hidden])")) document.body.classList.remove("is-locked");
+  if (id === "project-modal") {
+    state.openProjectId = null;
+    state.openProject = null;
+    if (location.hash.startsWith("#/project/")) {
+      history.replaceState(null, "", location.pathname + location.search);
+    }
+  } else if (id === "sample-modal") {
+    state.openSample = null;
+  }
+  returnFocusTo?.focus?.({ preventScroll: true });
+}
+
+// ── Process, about, FAQ, contacts ────────────────────────────────────────────
+function renderProcess() {
+  $("process-steps").innerHTML = t("process").map((step, i) => `
+    <li class="process__step">
+      <span class="process__stage">${t("process_stage")} ${pad(i + 1)}</span>
+      <h3 class="process__title">${step.title}</h3>
+      <p class="process__text">${step.text}</p>
+    </li>`).join("");
+}
+
+function renderFacts() {
+  $("about-facts").innerHTML = t("about_facts").map((fact) => `
+    <div><dt>${fact.label}</dt><dd>${fact.value}</dd></div>`).join("");
+}
+
+// The about text comes from backend/config/about/bio.txt (bio.en.txt in English).
+function renderAbout() {
+  const c = state.contacts;
+  const bio = (getLang() === "en" && c.bio_en) || c.bio || "";
+  $("about-bio").innerHTML = paragraphs(bio);
+}
+
+// The FAQ comes from backend/config/about/faq.yaml; the section stays hidden
+// while the list is empty.
+function renderFaq() {
+  $("faq").hidden = !state.faq.length;
+  $("faq-list").innerHTML = state.faq.map((item, i) => {
+    const open = state.faqOpen.has(i);
+    return `
+      <div class="faq__item">
+        <button class="faq__question" data-faq="${i}" aria-expanded="${open}" aria-controls="faq-answer-${i}">
+          <span>${esc(localized(item.question))}</span><span class="faq__icon" aria-hidden="true">${open ? "−" : "+"}</span>
+        </button>
+        <div class="faq__answer" id="faq-answer-${i}" ${open ? "" : "hidden"}>${paragraphs(localized(item.answer))}</div>
+      </div>`;
+  }).join("");
+}
+
+function toggleFaq(button) {
+  const i = Number(button.dataset.faq);
+  const open = !state.faqOpen.has(i);
+  if (open) state.faqOpen.add(i);
+  else state.faqOpen.delete(i);
+  button.setAttribute("aria-expanded", String(open));
+  button.querySelector(".faq__icon").textContent = open ? "−" : "+";
+  $(`faq-answer-${i}`).hidden = !open;
+}
+
+function renderContacts() {
+  const c = state.contacts;
+  const handle = (value) => encodeURIComponent(value.replace(/^@/, ""));
+  const rows = [
+    c.telegram && { label: t("contacts_telegram"), value: c.telegram, href: `https://t.me/${handle(c.telegram)}` },
+    c.instagram && { label: t("contacts_instagram"), value: c.instagram, href: `https://instagram.com/${handle(c.instagram)}` },
+    c.email && { label: t("contacts_email"), value: c.email, href: `mailto:${c.email}`, local: true },
+  ].filter(Boolean);
+  const list = $("contact-list");
+  list.hidden = !rows.length;
+  list.innerHTML = rows.map((row) => `
+    <a href="${esc(row.href)}" ${row.local ? "" : `target="_blank" rel="noopener"`}>
+      <span class="caps">${row.label}</span><span>${esc(row.value)} →</span>
+    </a>`).join("");
+}
+
+// ── Request form ─────────────────────────────────────────────────────────────
+function renderServiceOptions() {
+  const select = $("rf-service");
+  const current = select.value || "layout";
+  select.innerHTML = [
+    ...t("services").map((s) => `<option value="${s.id}">${s.title}</option>`),
+    `<option value="several">${t("form_service_several")}</option>`,
+  ].join("");
+  select.value = current;
+}
+
+function initForm() {
+  const form = $("request-form");
+  form.addEventListener("input", () => {
+    syncPreferredContact();
+    $("form-success").hidden = true;
+  });
   form.addEventListener("submit", submitRequest);
-  form.addEventListener("input", () => syncPreferredContact(form));
-  syncPreferredContact(form);
-  overlay.addEventListener("click", (e) => { if (e.target === overlay) closeModal(); });
-}
-
-function closeModal() {
-  document.getElementById("modal-overlay").classList.add("hidden");
+  $("consent-toggle").addEventListener("click", (e) => {
+    const text = $("consent-text");
+    text.hidden = !text.hidden;
+    e.currentTarget.setAttribute("aria-expanded", String(!text.hidden));
+  });
+  syncPreferredContact();
 }
 
 // Offers only the contacts that are filled in; there is nothing to choose
 // from until at least two of them are.
-function syncPreferredContact(form) {
-  const group = form.querySelector("#rf-preferred");
+function syncPreferredContact() {
+  const form = $("request-form");
+  const group = $("rf-preferred");
   const radios = [...group.querySelectorAll('input[name="preferred_contact"]')];
-
   for (const radio of radios) {
     const filled = form.elements[radio.value].value.trim() !== "";
     radio.disabled = !filled;
-    radio.closest("label").classList.toggle("hidden", !filled);
+    radio.closest("label").hidden = !filled;
   }
-
-  const available = radios.filter((radio) => !radio.disabled);
-  group.classList.toggle("hidden", available.length < 2);
-  if (available.length && !available.some((radio) => radio.checked)) {
-    available[0].checked = true;
-  }
+  const available = radios.filter((r) => !r.disabled);
+  group.hidden = available.length < 2;
+  if (available.length && !available.some((r) => r.checked)) available[0].checked = true;
 }
 
-function buildRequestForm() {
-  const preferredOptions = [
-    ["email", "modal_email_short"],
-    ["phone", "modal_phone"],
-    ["telegram", "modal_telegram"],
-  ].map(([value, label]) => `
-    <label class="pref-option">
-      <input type="radio" name="preferred_contact" value="${value}">
-      <span>${t(label)}</span>
-    </label>`).join("");
-
-  return `
-    <div class="modal">
-      <button id="close-modal" class="modal__close" aria-label="${t("modal_close")}">&times;</button>
-      <h2 class="modal__title">${t("modal_title")}</h2>
-      <form id="request-form" class="form" enctype="multipart/form-data" novalidate>
-        <div class="form__row">
-          <label class="form__label" for="rf-first">${t("modal_first_name")}</label>
-          <input id="rf-first" name="first_name" class="form__input" required>
-        </div>
-        <div class="form__row">
-          <label class="form__label" for="rf-last">${t("modal_last_name")}</label>
-          <input id="rf-last" name="last_name" class="form__input" required>
-        </div>
-        <div class="form__row">
-          <label class="form__label" for="rf-email">${t("modal_email")}</label>
-          <input id="rf-email" name="email" type="email" autocomplete="email" class="form__input" required>
-        </div>
-        <div class="form__row">
-          <label class="form__label" for="rf-phone">${t("modal_phone")}</label>
-          <input id="rf-phone" name="phone" type="tel" autocomplete="tel" class="form__input">
-        </div>
-        <div class="form__row">
-          <label class="form__label" for="rf-telegram">${t("modal_telegram")}</label>
-          <input id="rf-telegram" name="telegram" placeholder="@username" class="form__input">
-        </div>
-        <fieldset id="rf-preferred" class="form__fieldset hidden">
-          <legend class="form__label">${t("modal_preferred")}</legend>
-          <div class="pref-options">${preferredOptions}</div>
-        </fieldset>
-        <div class="form__row">
-          <label class="form__label" for="rf-desc">${t("modal_description")}</label>
-          <textarea id="rf-desc" name="description" class="form__textarea" rows="4" required></textarea>
-        </div>
-        <div class="form__row">
-          <label class="form__label" for="rf-files">${t("modal_files")}</label>
-          <input id="rf-files" name="attachments" type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
-            multiple class="form__file">
-        </div>
-        <div class="form__row form__row--consent">
-          <label class="form__checkbox-label">
-            <input type="checkbox" id="rf-consent" name="consented" class="form__checkbox" required>
-            ${t("modal_consent_label")}
-            <button type="button" class="btn-link" id="show-consent">${t("modal_consent_link")}</button>
-          </label>
-        </div>
-        <div id="consent-text" class="consent-text hidden">
-          <p>${t("modal_consent_body")}</p>
-        </div>
-        <div id="form-error" class="form__error hidden"></div>
-        <button type="submit" class="btn btn--primary btn--full">${t("modal_submit")}</button>
-      </form>
-    </div>`;
+// Type, service and area have no columns of their own: they go into the
+// description, in Russian, for the admin panel.
+function composeDescription() {
+  const object = $("rf-object").value === "commercial" ? "form_object_commercial" : "form_object_residential";
+  const serviceId = $("rf-service").value;
+  const service = serviceId === "several"
+    ? tRu("form_service_several")
+    : tRu("services").find((s) => s.id === serviceId)?.title ?? serviceId;
+  const lines = [`Тип объекта: ${tRu(object)}`, `Услуга: ${service}`];
+  const area = Number($("rf-area").value);
+  if (area > 0) lines.push(`Площадь: ${area} м²`);
+  const comment = $("rf-comment").value.trim();
+  return lines.join("\n") + (comment ? `\n\n${comment}` : "");
 }
 
 async function submitRequest(e) {
   e.preventDefault();
   const form = e.target;
-  const errEl = form.querySelector("#form-error");
-  errEl.classList.add("hidden");
+  const errorBox = $("form-error");
+  const fail = (message, field) => {
+    errorBox.textContent = message;
+    errorBox.hidden = false;
+    field?.focus();
+  };
+  errorBox.hidden = true;
 
-  const email = form.querySelector("#rf-email");
-  if (!email.value.trim() || !email.checkValidity()) {
-    showFormError(errEl, t("err_email"));
-    email.focus();
-    return;
-  }
+  const first = $("rf-first");
+  const last = $("rf-last");
+  if (!first.value.trim()) return fail(t("err_name"), first);
+  if (!last.value.trim()) return fail(t("err_name"), last);
+  const email = $("rf-email");
+  if (!email.value.trim() || !email.checkValidity()) return fail(t("err_email"), email);
+  if (!$("rf-consent").checked) return fail(t("err_consent"), $("rf-consent"));
 
-  if (!form.querySelector("#rf-consent").checked) {
-    showFormError(errEl, t("err_consent"));
-    return;
-  }
-
-  const fd = new FormData(form);
+  const fd = new FormData();
+  fd.set("first_name", first.value.trim());
+  fd.set("last_name", last.value.trim());
+  fd.set("email", email.value.trim());
+  fd.set("phone", $("rf-phone").value.trim());
+  fd.set("telegram", $("rf-telegram").value.trim());
+  const preferred = form.querySelector('input[name="preferred_contact"]:checked:not(:disabled)');
+  if (preferred) fd.set("preferred_contact", preferred.value);
+  fd.set("description", composeDescription());
   fd.set("consented", "true");
+  for (const file of $("rf-files").files) fd.append("attachments", file);
 
+  const submit = $("form-submit");
+  submit.disabled = true;
+  submit.textContent = t("form_sending");
   try {
     await api.requests.create(fd);
-    form.closest(".modal").innerHTML = `
-      <div class="modal__success">
-        <h2>${t("modal_success_title")}</h2>
-        <p>${t("modal_success_body")}</p>
-        <button class="btn btn--primary" onclick="document.getElementById('modal-overlay').classList.add('hidden')">${t("modal_close")}</button>
-      </div>`;
+    form.reset();
+    syncPreferredContact();
+    $("form-success").hidden = false;
   } catch (err) {
-    showFormError(errEl, err.message);
+    fail(err.message);
+  } finally {
+    submit.disabled = false;
+    submit.textContent = t("form_submit");
   }
 }
 
-function showFormError(el, msg) {
-  el.textContent = msg;
-  el.classList.remove("hidden");
+// ── Utilities ────────────────────────────────────────────────────────────────
+// Picks the text for the current language from {ru, en}; English falls back to Russian.
+function localized(text) {
+  return (getLang() === "en" && text?.en) || text?.ru || "";
 }
 
-// ── Consent text toggle ───────────────────────────────────────────────────────
-document.addEventListener("click", (e) => {
-  if (e.target.id === "show-consent") {
-    document.getElementById("consent-text")?.classList.toggle("hidden");
-  }
-});
+// Plain text to HTML: a blank line starts a paragraph, a single newline breaks the line.
+function paragraphs(text) {
+  return String(text ?? "")
+    .split(/\n{2,}/)
+    .filter((para) => para.trim())
+    .map((para) => `<p>${esc(para).replace(/\n/g, "<br>")}</p>`)
+    .join("");
+}
 
-// ── Utilities ─────────────────────────────────────────────────────────────────
+function euro(value) {
+  return "€" + value.toLocaleString(getLang() === "en" ? "en-GB" : "ru-RU");
+}
+
+function pad(n) {
+  return String(n).padStart(2, "0");
+}
+
 function esc(str) {
   return String(str ?? "")
     .replace(/&/g, "&amp;")
@@ -376,6 +621,3 @@ function esc(str) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 }
-
-// Bootstrap
-navigate();
