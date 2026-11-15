@@ -207,9 +207,24 @@ cmd_start() {
 
   # 5. Frontend
   step "Запускаю frontend (порт $FRONTEND_PORT)…"
-  python3 -m http.server "$FRONTEND_PORT" \
-    --directory "$WEBUI_DIR" \
-    > "$LOG_DIR/frontend.log" 2>&1 &
+  # Static server that forbids caching: after editing webui/ a normal page
+  # reload shows the change (plain "python3 -m http.server" lets the browser
+  # keep stale CSS/JS).
+  python3 - "$FRONTEND_PORT" "$WEBUI_DIR" > "$LOG_DIR/frontend.log" 2>&1 <<'PY' &
+import sys
+from functools import partial
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+
+
+class NoCacheHandler(SimpleHTTPRequestHandler):
+    def end_headers(self):
+        self.send_header("Cache-Control", "no-store")
+        super().end_headers()
+
+
+port, directory = int(sys.argv[1]), sys.argv[2]
+ThreadingHTTPServer(("", port), partial(NoCacheHandler, directory=directory)).serve_forever()
+PY
   local frontend_pid=$!
   save_pid "$frontend_pid" "frontend"
 

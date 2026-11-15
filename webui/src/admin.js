@@ -195,7 +195,7 @@ async function renderProjects(content) {
 // Work directions shown as filters on the public site.
 const PROJECT_CATEGORIES = {
   residential: "Жилой интерьер (Residential)",
-  commercial: "Коммерческий / HoReCa (Commercial)",
+  commercial: "HoReCa",
 };
 
 function openProjectEditor(project) {
