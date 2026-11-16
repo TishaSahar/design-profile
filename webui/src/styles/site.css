@@ -235,7 +235,18 @@ button { cursor: pointer; background: none; border: none; }
   overflow: hidden;
 }
 .hero__photo { position: absolute; inset: 0; }
-.hero__photo::after { content: ""; position: absolute; inset: 0; background: rgba(41, 32, 27, .45); }
+/* Darkens the photo so the white text stays readable: strongest behind the
+   centred text, lighter towards the edges so the interior still shows, plus a
+   band along the top edge for the small captions there. */
+.hero__photo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to bottom, rgba(29, 22, 18, .4) 0%, rgba(29, 22, 18, 0) 22%),
+    radial-gradient(ellipse 70% 60% at 50% 50%, rgba(29, 22, 18, .72) 0%, rgba(29, 22, 18, .5) 100%),
+    rgba(29, 22, 18, .12);
+}
 .hero__meta, .hero__content { position: relative; z-index: 1; }
 .hero__meta {
   width: 100%;
@@ -298,6 +309,8 @@ button { cursor: pointer; background: none; border: none; }
 }
 .direction__photo--square { width: 100%; max-width: 28rem; aspect-ratio: 1; }
 .direction__photo--portrait { width: 16rem; aspect-ratio: 3 / 4; margin: 0 auto; }
+/* A taller photo loses its top (usually ceiling) rather than the furniture. */
+.direction__photo--portrait img { object-position: center bottom; }
 .direction__center { margin: auto 0; padding: 1rem 0; text-align: center; }
 .direction__title {
   font-family: var(--serif);
@@ -343,7 +356,8 @@ button { cursor: pointer; background: none; border: none; }
 }
 .projects-grid > .empty, .projects-grid > .error, .projects-grid > .loader { grid-column: 1 / -1; }
 .project-card a { display: flex; flex-direction: column; height: 100%; }
-.project-card .photo { aspect-ratio: 4 / 3; margin-bottom: 1.25rem; }
+/* Project covers (cards and the main photo in the case dialog) are portrait 2:3. */
+.project-card .photo { aspect-ratio: 2 / 3; margin-bottom: 1.25rem; }
 .project-card__meta {
   display: flex;
   justify-content: space-between;
@@ -619,9 +633,12 @@ input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; background: v
 .dialog__body { padding: clamp(1.5rem, 4vw, 3rem); display: grid; gap: 2rem; }
 .dialog__title { font-family: var(--serif); font-weight: 300; font-size: clamp(2rem, 4vw, 3rem); line-height: 1.1; }
 .dialog__text { font-size: 14px; line-height: 1.75; color: rgba(30, 28, 26, .85); white-space: pre-line; }
-.case__cover { aspect-ratio: 16 / 9; }
-.case__gallery { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; }
-.case__gallery .photo { aspect-ratio: 4 / 3; }
+/* The main photo is limited so that its height stays within 75% of the screen. */
+.case__cover { aspect-ratio: 2 / 3; width: min(100%, 28rem, 50vh); justify-self: center; }
+/* Gallery photos keep their own proportions; columns pack them like a masonry wall. */
+.case__gallery { columns: 3; column-gap: 1.5rem; }
+.case__gallery .photo { break-inside: avoid; margin-bottom: 1.5rem; }
+.case__gallery .photo img { height: auto; }
 .case__cta { padding-top: 1.5rem; border-top: 1px solid var(--hairline); display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; font-size: 13px; color: var(--muted); }
 
 .sample-plan { width: 100%; height: auto; background: var(--cream); border: 1px solid var(--hairline); }
@@ -650,6 +667,7 @@ input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; background: v
   .hero { min-height: 88vh; }
 }
 @media (max-width: 1023px) {
+  .case__gallery { columns: 2; }
   .directions { grid-template-columns: 1fr; }
   .direction--residential { border-right: none; border-bottom: 1px solid var(--hairline); }
   .projects-grid { grid-template-columns: repeat(2, 1fr); }
@@ -675,6 +693,7 @@ input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; background: v
   .about__portrait { margin-left: auto; margin-right: auto; }
   .direction__vertical { display: none; }
   .direction__bottom { flex-direction: column; align-items: flex-start; }
-  .case__gallery, .sample-sheets { grid-template-columns: 1fr; }
+  .case__gallery { columns: 1; }
+  .sample-sheets { grid-template-columns: 1fr; }
   .service-card__actions { flex-direction: column; }
 }

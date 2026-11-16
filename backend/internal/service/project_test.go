@@ -145,6 +145,25 @@ func TestUpdate_ValidInput_CallsRepo(t *testing.T) {
 	repo.AssertExpectations(t)
 }
 
+func TestCreate_Cyrillic500Chars_Allowed(t *testing.T) {
+	repo := &mockProjectRepo{}
+	svc := NewProjectService(repo)
+	ctx := context.Background()
+	desc := strings.Repeat("ж", 500) // 500 characters, 1000 bytes
+
+	repo.On("Create", ctx, "Title", desc, "residential").Return(&model.Project{ID: uuid.New()}, nil)
+
+	_, err := svc.Create(ctx, "Title", desc, "")
+	require.NoError(t, err)
+	repo.AssertExpectations(t)
+}
+
+func TestCreate_Cyrillic501Chars_ReturnsError(t *testing.T) {
+	svc := NewProjectService(&mockProjectRepo{})
+	_, err := svc.Create(context.Background(), "Title", strings.Repeat("ж", 501), "")
+	assert.Error(t, err)
+}
+
 // ── Category ─────────────────────────────────────────────────────────────────
 
 func TestCreate_UnknownCategory_ReturnsError(t *testing.T) {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"mime"
 	"path/filepath"
+	"unicode/utf8"
 
 	"design-profile/backend/internal/model"
 
@@ -45,7 +46,9 @@ func validateProject(title, description string) error {
 	if title == "" {
 		return fmt.Errorf("title is required")
 	}
-	if len(description) > 500 {
+	// Characters, not bytes: Cyrillic letters take two bytes each, and the
+	// column is VARCHAR(500) characters.
+	if utf8.RuneCountInString(description) > 500 {
 		return fmt.Errorf("description must not exceed 500 characters")
 	}
 	return nil
