@@ -174,6 +174,7 @@ func main() {
 		adminProjects := admin.Group("/projects")
 		{
 			adminProjects.POST("", projectH.CreateProject)
+			adminProjects.PUT("/order", projectH.ReorderProjects)
 			adminProjects.PUT("/:id", projectH.UpdateProject)
 			adminProjects.DELETE("/:id", projectH.DeleteProject)
 			adminProjects.POST("/:id/media", projectH.AddMedia)

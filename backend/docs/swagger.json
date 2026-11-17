@@ -100,6 +100,55 @@
                 }
             }
         },
+        "/admin/projects/order": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Sets the order of a category's projects on the public site; project_ids must list every project of the category exactly once.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Reorder projects of a category (admin)",
+                "parameters": [
+                    {
+                        "description": "Category and project IDs in the new order",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.reorderProjectsBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/admin/projects/{id}": {
             "put": {
                 "security": [
@@ -911,6 +960,25 @@
             ],
             "properties": {
                 "media_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "handler.reorderProjectsBody": {
+            "type": "object",
+            "required": [
+                "category",
+                "project_ids"
+            ],
+            "properties": {
+                "category": {
+                    "type": "string",
+                    "example": "residential"
+                },
+                "project_ids": {
                     "type": "array",
                     "items": {
                         "type": "string"

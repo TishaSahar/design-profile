@@ -68,6 +68,10 @@ func (m *mockProjectRepo) DeleteMedia(ctx context.Context, mediaID uuid.UUID) er
 	return m.Called(ctx, mediaID).Error(0)
 }
 
+func (m *mockProjectRepo) ReorderProjects(ctx context.Context, category string, projectIDs []uuid.UUID) error {
+	return m.Called(ctx, category, projectIDs).Error(0)
+}
+
 func (m *mockProjectRepo) ReorderMedia(ctx context.Context, projectID uuid.UUID, mediaIDs []uuid.UUID) error {
 	return m.Called(ctx, projectID, mediaIDs).Error(0)
 }
@@ -269,6 +273,52 @@ func TestReorderMedia_InvalidLists_ReturnError(t *testing.T) {
 			repo.On("GetByID", ctx, p.ID).Return(p, nil)
 			assert.Error(t, NewProjectService(repo).ReorderMedia(ctx, p.ID, order))
 			repo.AssertNotCalled(t, "ReorderMedia", mock.Anything, mock.Anything, mock.Anything)
+		})
+	}
+}
+
+// Two residential projects and one commercial one.
+func projectsByCategory() ([]model.Project, []uuid.UUID) {
+	ids := []uuid.UUID{uuid.New(), uuid.New(), uuid.New()}
+	return []model.Project{
+		{ID: ids[0], Category: CategoryResidential},
+		{ID: ids[1], Category: CategoryCommercial},
+		{ID: ids[2], Category: CategoryResidential},
+	}, ids
+}
+
+func TestReorderProjects_ValidOrder_CallsRepo(t *testing.T) {
+	repo := &mockProjectRepo{}
+	ctx := context.Background()
+	projects, ids := projectsByCategory()
+	newOrder := []uuid.UUID{ids[2], ids[0]}
+
+	repo.On("List", ctx).Return(projects, nil)
+	repo.On("ReorderProjects", ctx, CategoryResidential, newOrder).Return(nil)
+
+	require.NoError(t, NewProjectService(repo).ReorderProjects(ctx, CategoryResidential, newOrder))
+	repo.AssertExpectations(t)
+}
+
+func TestReorderProjects_InvalidInput_ReturnError(t *testing.T) {
+	ctx := context.Background()
+	projects, ids := projectsByCategory()
+	for name, tc := range map[string]struct {
+		category string
+		order    []uuid.UUID
+	}{
+		"missing project":           {CategoryResidential, []uuid.UUID{ids[0]}},
+		"project of other category": {CategoryResidential, []uuid.UUID{ids[0], ids[1]}},
+		"unknown project":           {CategoryResidential, []uuid.UUID{ids[0], uuid.New()}},
+		"duplicate":                 {CategoryResidential, []uuid.UUID{ids[0], ids[0]}},
+		"empty category":            {"", []uuid.UUID{ids[1]}},
+		"unknown category":          {"office", []uuid.UUID{ids[1]}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			repo := &mockProjectRepo{}
+			repo.On("List", ctx).Return(projects, nil)
+			assert.Error(t, NewProjectService(repo).ReorderProjects(ctx, tc.category, tc.order))
+			repo.AssertNotCalled(t, "ReorderProjects", mock.Anything, mock.Anything, mock.Anything)
 		})
 	}
 }

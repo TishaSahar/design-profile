@@ -110,9 +110,63 @@ h3 { font-size: 1.15rem; font-weight: 600; }
 
 .admin-section__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
 .admin-list { display: flex; flex-direction: column; gap: .75rem; }
-.admin-list__row { display: flex; align-items: center; justify-content: space-between; padding: .75rem 1rem; background: #fff; border-radius: 8px; border: 1px solid #e5e5e5; }
+.admin-list__row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; justify-content: space-between; padding: .75rem 1rem; background: #fff; border-radius: 8px; border: 1px solid #e5e5e5; }
 .admin-list__name { font-weight: 500; }
+.admin-list__open {
+  border: 0; background: none; padding: 0; font: inherit; font-weight: 500; color: inherit;
+  text-align: left; cursor: pointer;
+}
+.admin-list__row--sortable .admin-list__open { cursor: grab; }
+/* Project rows open the preview on click (sortable ones show the grab cursor instead). */
+.admin-list__row[data-id]:not(.admin-list__row--sortable) { cursor: pointer; }
+.admin-list__row[data-id]:hover { border-color: #cfc6b8; }
+.admin-list__open:hover, .admin-list__open:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
 .admin-list__meta { font-size: .8rem; color: #888; margin-left: .5rem; }
+.admin-list__title { display: flex; align-items: center; gap: .75rem; min-width: 0; }
+.admin-list__pos {
+  flex: none; min-width: 26px; height: 26px; padding: 0 6px; border-radius: 13px;
+  background: #f1ece4; color: #555; font-size: .8rem; line-height: 26px; text-align: center;
+}
+.admin-list__row--sortable { cursor: grab; user-select: none; }
+.is-sorting, .is-sorting * { cursor: grabbing; }
+.admin-list__row.is-dragging {
+  position: relative; z-index: 1;
+  border-color: var(--c-accent); box-shadow: 0 6px 18px rgba(0,0,0,.12);
+}
+.drag-handle {
+  flex: none; width: 28px; height: 32px; margin-left: -.4rem; padding: 0;
+  border: 0; border-radius: 6px; background: none; color: #aaa;
+  font-size: 1rem; letter-spacing: -3px; line-height: 1;
+  cursor: grab; touch-action: none; /* touch drags here instead of scrolling the page */
+}
+.drag-handle:hover, .drag-handle:focus-visible { color: #555; background: #f1ece4; }
+.media-thumb--sortable .media-thumb__frame { cursor: grab; user-select: none; }
+.media-thumb.is-dragging .media-thumb__img { border-color: var(--c-accent); box-shadow: 0 6px 18px rgba(0,0,0,.18); opacity: .85; }
+.drag-handle--photo {
+  position: absolute; top: 6px; right: 6px; margin: 0; width: 26px; height: 26px;
+  background: rgba(255,255,255,.85); color: #555; font-size: .85rem;
+}
+.drag-handle--photo:hover, .drag-handle--photo:focus-visible { background: #fff; }
+.is-sorting [data-tooltip]::after { display: none; }
+
+/* Hint on hover over an element with data-tooltip (a sortable row's title, a photo)
+   and on keyboard focus inside it. */
+[data-tooltip] { position: relative; }
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute; left: 0; bottom: calc(100% + 8px); z-index: 5;
+  width: max-content; max-width: min(22rem, 70vw);
+  padding: .4rem .65rem; border-radius: 6px;
+  background: #2b2b2b; color: #fff; font-size: .78rem; font-weight: 400; line-height: 1.35;
+  pointer-events: none; opacity: 0; transform: translateY(4px);
+  transition: opacity .15s ease .3s, transform .15s ease .3s;
+}
+[data-tooltip]:hover::after,
+[data-tooltip]:focus-within::after { opacity: 1; transform: none; }
+.media-thumb__frame[data-tooltip]::after { width: 16rem; }
+.project-group + .project-group { margin-top: 2rem; }
+.project-group__title { display: flex; align-items: baseline; gap: .5rem; margin-bottom: .5rem; font-size: 1.05rem; }
+.project-group__count { font-size: .8rem; color: #888; font-weight: 400; }
 .admin-list__actions { display: flex; gap: .5rem; }
 
 /* ── Project editor ───────────────────────────────────────────────────────── */
@@ -125,7 +179,6 @@ h3 { font-size: 1.15rem; font-weight: 600; }
 .media-manager { margin-top: 1.5rem; border-top: 1px solid #eee; padding-top: 1.5rem; }
 .media-manager h4 { margin-bottom: 1rem; }
 .media-grid { display: flex; flex-wrap: wrap; gap: 1rem; margin: .5rem 0 1rem; }
-.media-hint { font-size: .8rem; color: #666; line-height: 1.45; }
 /* Thumbnails are 2:3, like project covers on the site. */
 .media-thumb { width: 132px; }
 .media-thumb__frame { position: relative; }
@@ -174,4 +227,38 @@ h3 { font-size: 1.15rem; font-weight: 600; }
 @media (max-width: 640px) {
   .admin-header { padding: 0 1rem; }
   .admin-main { padding: 1rem; }
+}
+
+/* ── Project preview (admin) ─────────────────────────────────────────────── */
+body.is-locked { overflow: hidden; }
+.preview-overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(20, 18, 16, .55); padding: 1.5rem;
+  display: flex; align-items: stretch; justify-content: center;
+}
+.preview-panel {
+  width: min(100%, 1280px); display: flex; flex-direction: column;
+  background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.25);
+}
+.preview-panel__bar {
+  display: flex; flex-wrap: wrap; gap: .75rem 1rem; align-items: center; justify-content: space-between;
+  padding: .75rem 1rem; border-bottom: 1px solid #e5e5e5;
+}
+.preview-panel__tools { display: flex; gap: .75rem; align-items: center; }
+.preview-panel__stage { flex: 1; min-height: 0; position: relative; overflow: hidden; background: #ece8e2; }
+/* Size and scale are set by openProjectPreview() in admin.js. */
+.preview-panel__frame {
+  position: absolute; top: 0; left: 50%; transform-origin: top center;
+  border: 0; background: #F3EFEA;
+}
+.preview-panel__frame--phone { box-shadow: 0 0 0 1px rgba(0,0,0,.08); }
+.segmented { display: inline-flex; border: 1.5px solid #ccc; border-radius: 999px; padding: 2px; }
+.segmented__btn {
+  border: 0; background: none; border-radius: 999px; padding: .3rem .8rem;
+  font: inherit; font-size: .8rem; color: #555; cursor: pointer;
+}
+.segmented__btn[aria-pressed="true"] { background: var(--c-accent); color: #fff; }
+@media (max-width: 600px) {
+  .preview-overlay { padding: 0; }
+  .preview-panel { border-radius: 0; }
 }

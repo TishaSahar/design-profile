@@ -149,31 +149,76 @@ async function renderProjects(content) {
         <h2>Проекты</h2>
         <button class="btn btn--primary btn--sm" id="btn-add-project">+ Добавить проект</button>
       </div>
-      <div id="project-list" class="admin-list">
+      <div id="project-list">
         ${projects.length === 0 ? `<p class="empty">Проектов пока нет.</p>` : ""}
       </div>
     </div>
     <div id="project-editor" class="admin-editor hidden"></div>`;
 
+  // One list per category, in the order the projects appear on the site.
+  const byCategory = Object.keys(PROJECT_CATEGORIES).map((category) => ({
+    category,
+    items: projects.filter((p) => (p.category in PROJECT_CATEGORIES ? p.category : "residential") === category),
+  }));
+
+  projectPositions = new Map();
+  for (const { items } of byCategory) items.forEach((p, i) => projectPositions.set(p.id, i + 1));
+
   const list = document.getElementById("project-list");
-  for (const p of projects) {
-    const row = document.createElement("div");
-    row.className = "admin-list__row";
-    row.innerHTML = `
-      <span>
-        <span class="admin-list__name">${esc(p.title)}</span>
-        <span class="admin-list__meta">${PROJECT_CATEGORIES[p.category] ?? PROJECT_CATEGORIES.residential}</span>
-      </span>
-      <div class="admin-list__actions">
-        <button class="btn btn--ghost btn--sm" data-edit="${p.id}">Редактировать</button>
-        <button class="btn btn--danger btn--sm" data-delete="${p.id}">Удалить</button>
-      </div>`;
-    list.appendChild(row);
+  if (projects.length) {
+    list.innerHTML = byCategory.map(({ category, items }) => `
+      <section class="project-group">
+        <h3 class="project-group__title">${PROJECT_CATEGORIES[category]} <span class="project-group__count">${items.length}</span></h3>
+        <div class="admin-list" data-category="${category}">
+          ${items.length ? items.map((p, i) => `
+            <div class="admin-list__row ${items.length > 1 ? "admin-list__row--sortable" : ""}" data-id="${p.id}">
+              <span class="admin-list__title" data-tooltip="${items.length > 1
+                ? "Нажмите, чтобы открыть превью. Перетащите, чтобы изменить порядок на сайте"
+                : "Нажмите, чтобы открыть превью"}">
+                ${items.length > 1 ? `<button type="button" class="drag-handle"
+                  aria-label="Переместить «${esc(p.title)}»: стрелки вверх и вниз">⋮⋮</button>` : ""}
+                <span class="admin-list__pos">${i + 1}</span>
+                <button type="button" class="admin-list__name admin-list__open">${esc(p.title)}</button>
+              </span>
+              <div class="admin-list__actions">
+                <button class="btn btn--ghost btn--sm" data-edit="${p.id}">Редактировать</button>
+                <button class="btn btn--danger btn--sm" data-delete="${p.id}">Удалить</button>
+              </div>
+            </div>`).join("") : `<p class="empty">Проектов этого направления пока нет.</p>`}
+        </div>
+      </section>`).join("");
   }
 
   document.getElementById("btn-add-project").addEventListener("click", () => openProjectEditor(null));
 
+  for (const group of list.querySelectorAll(".admin-list[data-category]")) {
+    makeSortable(group, {
+      item: ".admin-list__row",
+      pos: ".admin-list__pos",
+      onChange: async (ids) => {
+        try {
+          await api.projects.reorder(group.dataset.category, ids);
+        } catch (err) {
+          alert("Ошибка: " + err.message);
+        }
+        await renderProjects(content);
+      },
+    });
+  }
+
   list.addEventListener("click", async (e) => {
+    // A click on a row (not on its buttons) opens the preview. After a drag the click
+    // lands on the list itself, not on a row, so dragging does not open it.
+    const row = e.target.closest(".admin-list__row[data-id]");
+    if (row && (e.target.closest(".admin-list__open") || !e.target.closest("button"))) {
+      try {
+        const full = await api.projects.get(row.dataset.id);
+        openProjectPreview(savedProjectPreview(full.data, full.data, projectPositions.get(row.dataset.id) ?? 1));
+      } catch (err) {
+        alert("Ошибка загрузки проекта: " + err.message);
+      }
+      return;
+    }
     const editId = e.target.dataset.edit;
     const deleteId = e.target.dataset.delete;
     if (editId) {
@@ -203,6 +248,172 @@ const PROJECT_CATEGORIES = {
   commercial: "HoReCa",
 };
 
+// Position of each project within its direction (1-based), from the last list render.
+let projectPositions = new Map();
+
+// Preview message for a saved project: its photos as published (the cover first, then
+// the rest in order) with `fields` (title, description, category), possibly unsaved edits.
+function savedProjectPreview(project, fields, number) {
+  const media = project.media ?? [];
+  const coverId = project.cover_media_id ?? media[0]?.id;
+  return {
+    project: { title: fields.title, description: fields.description ?? "", category: fields.category },
+    number,
+    coverUrl: coverId ? api.projects.mediaUrl(project.id, coverId) : null,
+    galleryUrls: media.filter((m) => m.id !== coverId).map((m) => api.projects.mediaUrl(project.id, m.id)),
+    photoCount: media.length,
+  };
+}
+
+// Shows the project as visitors will see it: preview.html draws it with the site's
+// own markup and styles. `data` is the message preview.js expects.
+function openProjectPreview(data) {
+  document.getElementById("project-preview")?.remove();
+  const overlay = document.createElement("div");
+  overlay.id = "project-preview";
+  overlay.className = "preview-overlay";
+  overlay.innerHTML = `
+    <div class="preview-panel" role="dialog" aria-modal="true" aria-label="Превью проекта">
+      <div class="preview-panel__bar">
+        <strong>Превью: так проект будет выглядеть на сайте</strong>
+        <div class="preview-panel__tools">
+          <div class="segmented" role="group" aria-label="Ширина экрана">
+            <button type="button" class="segmented__btn" data-width="desktop" aria-pressed="true">Компьютер</button>
+            <button type="button" class="segmented__btn" data-width="phone" aria-pressed="false">Телефон</button>
+          </div>
+          <button type="button" class="btn btn--ghost btn--sm" data-close-preview>Закрыть</button>
+        </div>
+      </div>
+      <div class="preview-panel__stage">
+        <iframe class="preview-panel__frame" src="./preview.html" title="Превью проекта"></iframe>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  document.body.classList.add("is-locked");
+
+  const frame = overlay.querySelector("iframe");
+  const stage = overlay.querySelector(".preview-panel__stage");
+  // "Компьютер" lays the page out at a typical desktop width and scales it down to fit,
+  // so the admin sees the real 3-column grid even in a narrow window.
+  const DESKTOP_WIDTH = 1280;
+  const PHONE_WIDTH = 390;
+  let phone = false;
+  const fit = () => {
+    const width = phone ? Math.min(PHONE_WIDTH, stage.clientWidth) : DESKTOP_WIDTH;
+    const scale = phone ? 1 : Math.min(1, stage.clientWidth / DESKTOP_WIDTH);
+    frame.style.width = `${width}px`;
+    frame.style.height = `${stage.clientHeight / scale}px`;
+    frame.style.transform = `translateX(-50%) scale(${scale})`;
+  };
+  fit();
+  window.addEventListener("resize", fit);
+
+  const send = () => frame.contentWindow.postMessage({ type: "project-preview", ...data }, location.origin);
+  const onMessage = (e) => {
+    if (e.source === frame.contentWindow && e.data?.type === "project-preview-ready") send();
+  };
+  window.addEventListener("message", onMessage);
+
+  const close = () => {
+    window.removeEventListener("message", onMessage);
+    window.removeEventListener("resize", fit);
+    document.removeEventListener("keydown", onKey);
+    document.body.classList.remove("is-locked");
+    overlay.remove();
+  };
+  const onKey = (e) => { if (e.key === "Escape") close(); };
+  document.addEventListener("keydown", onKey);
+
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay || e.target.closest("[data-close-preview]")) close();
+    const widthBtn = e.target.closest("[data-width]");
+    if (widthBtn) {
+      overlay.querySelectorAll("[data-width]").forEach((b) => b.setAttribute("aria-pressed", String(b === widthBtn)));
+      phone = widthBtn.dataset.width === "phone";
+      frame.classList.toggle("preview-panel__frame--phone", phone);
+      fit();
+    }
+  });
+  overlay.querySelector("[data-close-preview]").focus();
+}
+
+// Drag-and-drop ordering of the `item` elements (each with data-id) inside `container`:
+// project rows in a list, photo tiles in a wrapping grid.
+// A mouse can grab an item anywhere except its buttons; touch uses the ⋮⋮ handle, so the
+// page still scrolls; the keyboard moves the focused handle with the arrow keys.
+// `pos` is the selector of the position number inside an item, renumbered while dragging.
+// `onChange(ids)` gets the new order once a move ends with the order changed.
+function makeSortable(container, { item, pos, onChange }) {
+  // Items are looked up on every event: the container may be redrawn or still empty.
+  const items = () => [...container.querySelectorAll(`${item}[data-id]`)];
+  const order = () => items().map((el) => el.dataset.id);
+  const renumber = () => items().forEach((el, i) => { el.querySelector(pos).textContent = i + 1; });
+
+  let drag = null; // { el, pointerId, before }
+
+  container.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0) return;
+    const el = e.target.closest(`${item}[data-id]`);
+    if (!el || items().length < 2) return;
+    const onHandle = e.target.closest(".drag-handle");
+    const plainButton = e.target.closest("button:not(.admin-list__open), a, input");
+    if (!onHandle && (e.pointerType !== "mouse" || plainButton)) return;
+    e.preventDefault(); // no text selection while dragging
+    drag = { el, pointerId: e.pointerId, before: order().join(), x: e.clientX, y: e.clientY, started: false };
+  });
+
+  container.addEventListener("pointermove", (e) => {
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    // A press that barely moves is a click (e.g. opening the preview), not a drag.
+    if (!drag.started) {
+      if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 5) return;
+      drag.started = true;
+      container.setPointerCapture(e.pointerId);
+      drag.el.classList.add("is-dragging");
+      container.classList.add("is-sorting");
+    }
+    // Over another item: take its place. Moving forward the item goes after it,
+    // moving back before it, so the pointer ends up over the dragged item and nothing flickers.
+    const target = items().find((el) => {
+      if (el === drag.el) return false;
+      const box = el.getBoundingClientRect();
+      return e.clientX >= box.left && e.clientX <= box.right && e.clientY >= box.top && e.clientY <= box.bottom;
+    });
+    if (!target) return;
+    const list = items();
+    if (list.indexOf(drag.el) < list.indexOf(target)) target.after(drag.el);
+    else target.before(drag.el);
+    renumber();
+  });
+
+  const finish = (e) => {
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    drag.el.classList.remove("is-dragging");
+    container.classList.remove("is-sorting");
+    const changed = order().join() !== drag.before;
+    drag = null;
+    if (changed) onChange(order());
+  };
+  container.addEventListener("pointerup", finish);
+  container.addEventListener("pointercancel", finish);
+
+  container.addEventListener("keydown", (e) => {
+    const handle = e.target.closest(".drag-handle");
+    const back = e.key === "ArrowUp" || e.key === "ArrowLeft";
+    const forward = e.key === "ArrowDown" || e.key === "ArrowRight";
+    if (!handle || (!back && !forward)) return;
+    e.preventDefault();
+    const el = handle.closest(item);
+    const list = items();
+    const sibling = list[list.indexOf(el) + (back ? -1 : 1)];
+    if (!sibling) return;
+    if (back) sibling.before(el); else sibling.after(el);
+    renumber();
+    handle.focus();
+    onChange(order());
+  });
+}
+
 function openProjectEditor(project) {
   const editor = document.getElementById("project-editor");
   const isNew = !project;
@@ -230,12 +441,12 @@ function openProjectEditor(project) {
         <div class="form__row">
           <label class="form__label">Фотографии (можно выбрать несколько, в том числе в несколько заходов)</label>
           <input type="file" id="new-media-input" multiple accept="image/*" class="form__file">
-          <p class="media-hint">${PHOTO_HINT}</p>
           <div class="media-grid" id="new-media-list"></div>
         </div>` : ""}
         <div id="project-error" class="form__error hidden"></div>
         <div class="editor-card__actions">
           <button type="submit" class="btn btn--primary">${isNew ? "Создать" : "Сохранить"}</button>
+          <button type="button" class="btn btn--ghost" id="preview-project">Превью</button>
           <button type="button" class="btn btn--ghost" id="cancel-edit">Отмена</button>
         </div>
       </form>
@@ -243,6 +454,23 @@ function openProjectEditor(project) {
     </div>`;
 
   const pending = isNew ? setupPendingPhotos() : null;
+
+  document.getElementById("preview-project").addEventListener("click", () => {
+    const form = document.getElementById("project-form");
+    const fields = {
+      title: form.querySelector("[name=title]").value.trim() || "Без названия",
+      description: form.querySelector("[name=description]").value.trim(),
+      category: form.querySelector("[name=category]").value,
+    };
+    if (isNew) {
+      // New projects go to the top of their direction.
+      openProjectPreview({ project: fields, number: 1, ...pending.previewUrls() });
+      return;
+    }
+    // A project moved to another direction goes to the top of it.
+    const keepsPlace = fields.category === project.category && projectPositions.has(project.id);
+    openProjectPreview(savedProjectPreview(project, fields, keepsPlace ? projectPositions.get(project.id) : 1));
+  });
 
   document.getElementById("cancel-edit").addEventListener("click", () => {
     pending?.release();
@@ -285,24 +513,26 @@ function openProjectEditor(project) {
   if (!isNew) mountMediaManager(project);
 }
 
+// Tooltip over each photo (shown on hover, see [data-tooltip] in main.css).
 const PHOTO_HINT =
-  "Порядок фото — это порядок в галерее проекта на сайте; меняйте его стрелками ← →. " +
-  "Обложка показывается в карточке проекта и первой в его окне.";
+  "Порядок как в галерее проекта на сайте: перетащите фото на нужное место. " +
+  "Обложка показывается в карточке проекта и первой в его окне";
 
-// One photo tile with order and cover controls; `index` is its 0-based position.
-function photoTile({ src, alt, index, total, isCover }) {
+// One photo tile with cover and remove controls. `id` identifies it for makeSortable,
+// `index` is its 0-based position; photos can be dragged when there are several.
+function photoTile({ src, alt, id, index, total, isCover }) {
+  const sortable = total > 1;
   return `
-    <div class="media-thumb ${isCover ? "media-thumb--cover" : ""}" data-index="${index}">
-      <div class="media-thumb__frame">
-        <img src="${src}" alt="${esc(alt)}" class="media-thumb__img">
+    <div class="media-thumb ${isCover ? "media-thumb--cover" : ""} ${sortable ? "media-thumb--sortable" : ""}"
+      data-id="${id}" data-index="${index}">
+      <div class="media-thumb__frame" ${sortable ? `data-tooltip="${PHOTO_HINT}"` : ""}>
+        <img src="${src}" alt="${esc(alt)}" class="media-thumb__img" draggable="false">
         <span class="media-thumb__pos">${index + 1}</span>
+        ${sortable ? `<button type="button" class="drag-handle drag-handle--photo"
+          aria-label="Переместить фото ${index + 1}: клавиши со стрелками">⋮⋮</button>` : ""}
         ${isCover ? `<span class="media-thumb__badge">Обложка</span>` : ""}
       </div>
       <div class="media-thumb__actions">
-        <button type="button" class="btn btn--sm btn--ghost" data-move="-1" ${index === 0 ? "disabled" : ""}
-          title="Раньше" aria-label="Сдвинуть фото ${index + 1} раньше">←</button>
-        <button type="button" class="btn btn--sm btn--ghost" data-move="1" ${index === total - 1 ? "disabled" : ""}
-          title="Позже" aria-label="Сдвинуть фото ${index + 1} позже">→</button>
         <button type="button" class="btn btn--sm btn--ghost" data-cover ${isCover ? "disabled" : ""}
           aria-pressed="${isCover}">Обложка</button>
         <button type="button" class="btn btn--sm btn--danger" data-remove
@@ -315,43 +545,60 @@ function photoTile({ src, alt, index, total, isCover }) {
 function setupPendingPhotos() {
   const input = document.getElementById("new-media-input");
   const list = document.getElementById("new-media-list");
-  let items = []; // { file, url }
-  let cover = 0;
+  let items = []; // { key, file, url }
+  let nextKey = 1;
+  let coverKey = null; // the cover follows its photo when the order changes
+  const cover = () => Math.max(0, items.findIndex((item) => item.key === coverKey));
 
   const render = () => {
     list.innerHTML = items.map((item, i) => photoTile({
-      src: item.url, alt: item.file.name, index: i, total: items.length, isCover: i === cover,
+      src: item.url, alt: item.file.name, id: item.key, index: i, total: items.length,
+      isCover: item.key === coverKey,
     })).join("");
   };
 
+  // The list element stays while tiles are redrawn, so dragging is set up once.
+  makeSortable(list, {
+    item: ".media-thumb",
+    pos: ".media-thumb__pos",
+    onChange: (keys) => {
+      items = keys.map((key) => items.find((item) => String(item.key) === key));
+      render();
+    },
+  });
+
   input.addEventListener("change", () => {
-    for (const file of input.files) items.push({ file, url: URL.createObjectURL(file) });
+    for (const file of input.files) items.push({ key: nextKey++, file, url: URL.createObjectURL(file) });
     input.value = ""; // allows picking more files, including the same ones again
+    if (coverKey === null && items.length) coverKey = items[0].key;
     render();
   });
 
   list.addEventListener("click", (e) => {
-    const button = e.target.closest("button");
+    const button = e.target.closest("button:not(.drag-handle)");
     if (!button) return;
     const i = Number(button.closest(".media-thumb").dataset.index);
-    if (button.dataset.move) {
-      const j = i + Number(button.dataset.move);
-      [items[i], items[j]] = [items[j], items[i]];
-      if (cover === i) cover = j;
-      else if (cover === j) cover = i;
-    } else if ("cover" in button.dataset) {
-      cover = i;
+    if ("cover" in button.dataset) {
+      coverKey = items[i].key;
     } else if ("remove" in button.dataset) {
       URL.revokeObjectURL(items[i].url);
-      items.splice(i, 1);
-      if (i < cover || cover >= items.length) cover = Math.max(0, cover - 1);
+      const [removed] = items.splice(i, 1);
+      if (removed.key === coverKey) coverKey = items[0]?.key ?? null;
     }
     render();
   });
 
   return {
+    previewUrls: () => {
+      const coverUrl = items[cover()]?.url ?? null;
+      return {
+        coverUrl,
+        galleryUrls: items.filter((_, i) => i !== cover()).map((item) => item.url),
+        photoCount: items.length,
+      };
+    },
     files: () => items.map((item) => item.file),
-    coverIndex: () => cover,
+    coverIndex: cover,
     release: () => items.forEach((item) => URL.revokeObjectURL(item.url)),
   };
 }
@@ -362,10 +609,9 @@ function mountMediaManager(project) {
   const media = project.media ?? [];
   box.innerHTML = `
     <h4>Фотографии</h4>
-    <p class="media-hint">${PHOTO_HINT}</p>
     <div class="media-grid" id="media-grid">
       ${media.length ? media.map((m, i) => photoTile({
-        src: api.projects.mediaUrl(project.id, m.id), alt: m.filename,
+        src: api.projects.mediaUrl(project.id, m.id), alt: m.filename, id: m.id,
         index: i, total: media.length, isCover: m.id === project.cover_media_id,
       })).join("") : `<p class="empty">Фото пока нет.</p>`}
     </div>
@@ -392,18 +638,26 @@ function mountMediaManager(project) {
     cover_media_id: coverId,
   });
 
+  makeSortable(document.getElementById("media-grid"), {
+    item: ".media-thumb",
+    pos: ".media-thumb__pos",
+    onChange: async (ids) => {
+      try {
+        await api.projects.reorderMedia(project.id, ids);
+      } catch (err) {
+        alert("Ошибка: " + err.message);
+      }
+      await refresh();
+    },
+  });
+
   document.getElementById("media-grid").addEventListener("click", async (e) => {
-    const button = e.target.closest("button");
+    const button = e.target.closest("button:not(.drag-handle)");
     if (!button) return;
     const i = Number(button.closest(".media-thumb").dataset.index);
     const target = media[i];
     try {
-      if (button.dataset.move) {
-        const ids = media.map((m) => m.id);
-        const j = i + Number(button.dataset.move);
-        [ids[i], ids[j]] = [ids[j], ids[i]];
-        await api.projects.reorderMedia(project.id, ids);
-      } else if ("cover" in button.dataset) {
+      if ("cover" in button.dataset) {
         await setCover(target.id);
       } else if ("remove" in button.dataset) {
         if (!confirm("Удалить фото?")) return;

@@ -1,12 +1,14 @@
 import { api } from "./api.js";
 import { t, tRu, getLang, setLang, applyTranslations } from "./locales.js";
+import {
+  CATEGORIES, categoryOf, esc, pad, photoHTML, initPhotos, projectCardHTML, projectCaseHTML,
+} from "./project-view.js";
 
 // Prices in euros per m², by property type and service.
 const PRICING = {
   residential: { layout: 7, drawings: 10, concept: 19 },
   commercial: { layout: 9, drawings: 13, concept: 24 },
 };
-const CATEGORIES = ["residential", "commercial"];
 
 const state = {
   projects: [],
@@ -160,18 +162,6 @@ function handleHash() {
 // ── Photos ───────────────────────────────────────────────────────────────────
 // A photo file that does not exist yet shows a calm coloured block instead of a
 // broken image.
-function initPhotos(root) {
-  root.querySelectorAll(".photo img").forEach((img) => {
-    const markEmpty = () => img.closest(".photo")?.classList.add("photo--empty");
-    if (img.complete && img.naturalWidth === 0) markEmpty();
-    else img.addEventListener("error", markEmpty, { once: true });
-  });
-}
-
-function photoHTML(src, alt, extraClass = "") {
-  if (!src) return `<div class="photo photo--empty ${extraClass}"></div>`;
-  return `<div class="photo ${extraClass}"><img src="${src}" alt="${esc(alt)}" loading="lazy"></div>`;
-}
 
 // ── Directions & projects ────────────────────────────────────────────────────
 function renderDirectionPrices() {
@@ -179,10 +169,6 @@ function renderDirectionPrices() {
     const from = Math.min(...Object.values(PRICING[el.dataset.priceFrom]));
     el.textContent = `${t("dir_from")} ${euro(from)} / ${t("unit_m2")}`;
   });
-}
-
-function categoryOf(project) {
-  return CATEGORIES.includes(project.category) ? project.category : "residential";
 }
 
 function setFilter(filter) {
@@ -219,24 +205,10 @@ function renderProjects() {
     grid.innerHTML = `<p class="empty">${t("projects_empty_filter")}</p>`;
     return;
   }
-  grid.innerHTML = shown.map((p) => {
-    const cover = p.cover_media_id ? api.projects.mediaUrl(p.id, p.cover_media_id) : null;
-    return `
-      <article class="project-card">
-        <a href="#/project/${p.id}">
-          ${photoHTML(cover, p.title, "photo--zoom")}
-          <div class="project-card__body">
-            <div class="project-card__meta">
-              <span>${t(`category_${categoryOf(p)}`)}</span>
-              <span>${pad(state.projects.indexOf(p) + 1)}</span>
-            </div>
-            <h3 class="project-card__title">${esc(p.title)}</h3>
-            ${p.description ? `<p class="project-card__desc">${esc(p.description)}</p>` : ""}
-          </div>
-          <div class="project-card__open"><span>${t("project_open")}</span><span aria-hidden="true">→</span></div>
-        </a>
-      </article>`;
-  }).join("");
+  grid.innerHTML = shown.map((p, i) => projectCardHTML(p, {
+    number: i + 1,
+    coverUrl: p.cover_media_id ? api.projects.mediaUrl(p.id, p.cover_media_id) : null,
+  })).join("");
   initPhotos(grid);
 }
 
@@ -262,23 +234,13 @@ function renderCase() {
   const p = state.openProject;
   const media = p.media ?? [];
   const coverId = p.cover_media_id ?? media[0]?.id;
-  const gallery = media.filter((m) => m.id !== coverId);
-
-  $("case-meta").textContent = `${t(`category_${categoryOf(p)}`)} • ${t("project_photos", media.length)}`;
-  $("case-body").innerHTML = `
-    <h3 class="dialog__title" id="case-title">${esc(p.title)}</h3>
-    ${coverId
-      ? photoHTML(api.projects.mediaUrl(p.id, coverId), p.title, "case__cover")
-      : `<p class="muted">${t("case_no_photos")}</p>`}
-    ${p.description ? `<p class="dialog__text">${esc(p.description)}</p>` : ""}
-    ${gallery.length ? `
-      <div class="case__gallery">
-        ${gallery.map((m, i) => photoHTML(api.projects.mediaUrl(p.id, m.id), `${p.title} — ${i + 2}`)).join("")}
-      </div>` : ""}
-    <div class="case__cta">
-      <span>${t("case_cta_text")}</span>
-      <button class="btn btn--dark" data-order="concept" data-order-type="${categoryOf(p)}">${t("case_cta_btn")}</button>
-    </div>`;
+  const { meta, body } = projectCaseHTML(p, {
+    coverUrl: coverId ? api.projects.mediaUrl(p.id, coverId) : null,
+    galleryUrls: media.filter((m) => m.id !== coverId).map((m) => api.projects.mediaUrl(p.id, m.id)),
+    photoCount: media.length,
+  });
+  $("case-meta").textContent = meta;
+  $("case-body").innerHTML = body;
   initPhotos($("case-body"));
 }
 
@@ -611,14 +573,4 @@ function euro(value) {
   return "€" + value.toLocaleString(getLang() === "en" ? "en-GB" : "ru-RU");
 }
 
-function pad(n) {
-  return String(n).padStart(2, "0");
-}
 
-function esc(str) {
-  return String(str ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}

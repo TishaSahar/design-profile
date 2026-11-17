@@ -19,6 +19,19 @@ definitions:
     required:
     - media_ids
     type: object
+  handler.reorderProjectsBody:
+    properties:
+      category:
+        example: residential
+        type: string
+      project_ids:
+        items:
+          type: string
+        type: array
+    required:
+    - category
+    - project_ids
+    type: object
   handler.requestOTPBody:
     properties:
       email:
@@ -291,6 +304,38 @@ paths:
       security:
       - BearerAuth: []
       summary: Reorder project photos (admin)
+      tags:
+      - admin
+  /admin/projects/order:
+    put:
+      consumes:
+      - application/json
+      description: Sets the order of a category's projects on the public site; project_ids
+        must list every project of the category exactly once.
+      parameters:
+      - description: Category and project IDs in the new order
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.reorderProjectsBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Reorder projects of a category (admin)
       tags:
       - admin
   /admin/requests:

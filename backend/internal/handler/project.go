@@ -290,6 +290,49 @@ func (h *ProjectHandler) AddMedia(c *gin.Context) {
 	created(c, media)
 }
 
+type reorderProjectsBody struct {
+	Category   string   `json:"category"    binding:"required" example:"residential"`
+	ProjectIDs []string `json:"project_ids" binding:"required"`
+}
+
+// ReorderProjects godoc
+// @Summary      Reorder projects of a category (admin)
+// @Description  Sets the order of a category's projects on the public site; project_ids must list every project of the category exactly once.
+// @Tags         admin
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        body  body      reorderProjectsBody  true  "Category and project IDs in the new order"
+// @Success      200   {object}  map[string]interface{}
+// @Failure      400   {object}  map[string]string
+// @Router       /admin/projects/order [put]
+func (h *ProjectHandler) ReorderProjects(c *gin.Context) {
+	var body reorderProjectsBody
+	if err := c.ShouldBindJSON(&body); err != nil {
+		badRequest(c, err.Error())
+		return
+	}
+	ids := make([]uuid.UUID, 0, len(body.ProjectIDs))
+	for _, raw := range body.ProjectIDs {
+		id, err := uuid.Parse(raw)
+		if err != nil {
+			badRequest(c, "invalid project id: "+raw)
+			return
+		}
+		ids = append(ids, id)
+	}
+	if err := h.svc.ReorderProjects(c.Request.Context(), body.Category, ids); err != nil {
+		badRequest(c, err.Error())
+		return
+	}
+	projects, err := h.svc.List(c.Request.Context())
+	if err != nil {
+		internalError(c, "failed to list projects")
+		return
+	}
+	ok(c, projects)
+}
+
 type reorderMediaBody struct {
 	MediaIDs []string `json:"media_ids" binding:"required"`
 }

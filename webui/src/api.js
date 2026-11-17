@@ -49,6 +49,8 @@ export const api = {
       request("POST", `/admin/projects/${id}/media`, formData, true),
     deleteMedia: (projectId, mediaId) =>
       request("DELETE", `/admin/projects/${projectId}/media/${mediaId}`),
+    reorder: (category, projectIds) =>
+      request("PUT", "/admin/projects/order", { category, project_ids: projectIds }),
     reorderMedia: (projectId, mediaIds) =>
       request("PUT", `/admin/projects/${projectId}/media/order`, { media_ids: mediaIds }),
   },
