@@ -45,7 +45,43 @@ func (r *ProjectRepository) List(ctx context.Context) ([]model.Project, error) {
 		}
 		projects = append(projects, p)
 	}
-	return projects, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if err := r.attachMediaInfo(ctx, projects); err != nil {
+		return nil, err
+	}
+	return projects, nil
+}
+
+// attachMediaInfo fills Media of every project with its photos' metadata (no file
+// data), in gallery order, so the site can page through photos on project cards.
+func (r *ProjectRepository) attachMediaInfo(ctx context.Context, projects []model.Project) error {
+	if len(projects) == 0 {
+		return nil
+	}
+	index := make(map[uuid.UUID]int, len(projects))
+	for i, p := range projects {
+		index[p.ID] = i
+	}
+	rows, err := r.db.Query(ctx,
+		`SELECT id, project_id, content_type, filename, sort_order, created_at
+		 FROM project_media ORDER BY project_id, sort_order ASC`,
+	)
+	if err != nil {
+		return fmt.Errorf("list project media: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var m model.Media
+		if err := rows.Scan(&m.ID, &m.ProjectID, &m.ContentType, &m.Filename, &m.SortOrder, &m.CreatedAt); err != nil {
+			return fmt.Errorf("scan media: %w", err)
+		}
+		if i, ok := index[m.ProjectID]; ok {
+			projects[i].Media = append(projects[i].Media, m)
+		}
+	}
+	return rows.Err()
 }
 
 // GetByID returns a project with all its media metadata (no binary data).
