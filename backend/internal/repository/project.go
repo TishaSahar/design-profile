@@ -104,11 +104,15 @@ func (r *ProjectRepository) Delete(ctx context.Context, id uuid.UUID) error {
 }
 
 // AddMedia inserts a media file for a project and returns metadata (without binary data).
+// A negative sortOrder appends the file after the project's existing media.
 func (r *ProjectRepository) AddMedia(ctx context.Context, projectID uuid.UUID, data []byte, contentType, filename string, sortOrder int) (*model.Media, error) {
 	m := &model.Media{}
 	err := r.db.QueryRow(ctx,
 		`INSERT INTO project_media (project_id, data, content_type, filename, sort_order)
-		 VALUES ($1, $2, $3, $4, $5)
+		 VALUES ($1, $2, $3, $4,
+		         CASE WHEN $5::int >= 0 THEN $5::int
+		              ELSE (SELECT COALESCE(MAX(sort_order) + 1, 0) FROM project_media WHERE project_id = $1)
+		         END)
 		 RETURNING id, project_id, content_type, filename, sort_order, created_at`,
 		projectID, data, contentType, filename, sortOrder,
 	).Scan(&m.ID, &m.ProjectID, &m.ContentType, &m.Filename, &m.SortOrder, &m.CreatedAt)
@@ -153,6 +157,32 @@ func (r *ProjectRepository) ListMedia(ctx context.Context, projectID uuid.UUID) 
 		media = append(media, m)
 	}
 	return media, rows.Err()
+}
+
+// ReorderMedia sets sort_order of the project's media to their position in mediaIDs.
+func (r *ProjectRepository) ReorderMedia(ctx context.Context, projectID uuid.UUID, mediaIDs []uuid.UUID) error {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("reorder media: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck // no-op after Commit
+
+	for i, id := range mediaIDs {
+		tag, err := tx.Exec(ctx,
+			`UPDATE project_media SET sort_order = $1 WHERE id = $2 AND project_id = $3`,
+			i, id, projectID,
+		)
+		if err != nil {
+			return fmt.Errorf("reorder media: %w", err)
+		}
+		if tag.RowsAffected() != 1 {
+			return fmt.Errorf("reorder media: media %s does not belong to project %s", id, projectID)
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("reorder media: %w", err)
+	}
+	return nil
 }
 
 // DeleteMedia removes a single media file by ID.

@@ -68,6 +68,10 @@ func (m *mockProjectRepo) DeleteMedia(ctx context.Context, mediaID uuid.UUID) er
 	return m.Called(ctx, mediaID).Error(0)
 }
 
+func (m *mockProjectRepo) ReorderMedia(ctx context.Context, projectID uuid.UUID, mediaIDs []uuid.UUID) error {
+	return m.Called(ctx, projectID, mediaIDs).Error(0)
+}
+
 // ── Create validation ────────────────────────────────────────────────────────
 
 func TestCreate_EmptyTitle_ReturnsError(t *testing.T) {
@@ -224,4 +228,47 @@ func TestAddMedia_AllowedTypes_PassValidation(t *testing.T) {
 		})
 	}
 	repo.AssertExpectations(t)
+}
+
+// ── ReorderMedia ─────────────────────────────────────────────────────────────
+
+func projectWithMedia(n int) (*model.Project, []uuid.UUID) {
+	p := &model.Project{ID: uuid.New()}
+	ids := make([]uuid.UUID, n)
+	for i := range ids {
+		ids[i] = uuid.New()
+		p.Media = append(p.Media, model.Media{ID: ids[i], ProjectID: p.ID, SortOrder: i})
+	}
+	return p, ids
+}
+
+func TestReorderMedia_ValidOrder_CallsRepo(t *testing.T) {
+	repo := &mockProjectRepo{}
+	svc := NewProjectService(repo)
+	ctx := context.Background()
+	p, ids := projectWithMedia(3)
+	newOrder := []uuid.UUID{ids[2], ids[0], ids[1]}
+
+	repo.On("GetByID", ctx, p.ID).Return(p, nil)
+	repo.On("ReorderMedia", ctx, p.ID, newOrder).Return(nil)
+
+	require.NoError(t, svc.ReorderMedia(ctx, p.ID, newOrder))
+	repo.AssertExpectations(t)
+}
+
+func TestReorderMedia_InvalidLists_ReturnError(t *testing.T) {
+	ctx := context.Background()
+	p, ids := projectWithMedia(3)
+	for name, order := range map[string][]uuid.UUID{
+		"missing photo": {ids[0], ids[1]},
+		"foreign photo": {ids[0], ids[1], uuid.New()},
+		"duplicate":     {ids[0], ids[0], ids[1]},
+	} {
+		t.Run(name, func(t *testing.T) {
+			repo := &mockProjectRepo{}
+			repo.On("GetByID", ctx, p.ID).Return(p, nil)
+			assert.Error(t, NewProjectService(repo).ReorderMedia(ctx, p.ID, order))
+			repo.AssertNotCalled(t, "ReorderMedia", mock.Anything, mock.Anything, mock.Anything)
+		})
+	}
 }

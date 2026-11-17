@@ -177,6 +177,7 @@ func main() {
 			adminProjects.PUT("/:id", projectH.UpdateProject)
 			adminProjects.DELETE("/:id", projectH.DeleteProject)
 			adminProjects.POST("/:id/media", projectH.AddMedia)
+			adminProjects.PUT("/:id/media/order", projectH.ReorderMedia)
 			adminProjects.DELETE("/:id/media/:mediaId", projectH.DeleteMedia)
 		}
 

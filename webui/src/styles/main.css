@@ -124,10 +124,26 @@ h3 { font-size: 1.15rem; font-weight: 600; }
 /* ── Media manager ────────────────────────────────────────────────────────── */
 .media-manager { margin-top: 1.5rem; border-top: 1px solid #eee; padding-top: 1.5rem; }
 .media-manager h4 { margin-bottom: 1rem; }
-.media-grid { display: flex; flex-wrap: wrap; gap: .75rem; margin-bottom: 1rem; }
-.media-thumb { position: relative; width: 140px; }
-.media-thumb__img { width: 140px; height: 100px; object-fit: cover; border-radius: 6px; }
-.media-thumb__actions { display: flex; gap: .25rem; margin-top: .25rem; }
+.media-grid { display: flex; flex-wrap: wrap; gap: 1rem; margin: .5rem 0 1rem; }
+.media-hint { font-size: .8rem; color: #666; line-height: 1.45; }
+/* Thumbnails are 2:3, like project covers on the site. */
+.media-thumb { width: 132px; }
+.media-thumb__frame { position: relative; }
+.media-thumb__img { width: 132px; height: 198px; object-fit: cover; border-radius: 6px; border: 2px solid transparent; }
+.media-thumb--cover .media-thumb__img { border-color: var(--c-accent); }
+.media-thumb__pos {
+  position: absolute; top: 6px; left: 6px;
+  min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px;
+  background: rgba(0,0,0,.65); color: #fff; font-size: .75rem; line-height: 22px; text-align: center;
+}
+.media-thumb__badge {
+  position: absolute; left: 6px; right: 6px; bottom: 6px;
+  padding: 2px 0; border-radius: 4px; background: var(--c-accent); color: #fff;
+  font-size: .72rem; text-align: center;
+}
+.media-thumb__actions { display: flex; flex-wrap: wrap; gap: .25rem; margin-top: .35rem; }
+.media-thumb__actions .btn { padding: .25rem .55rem; }
+.media-thumb__actions .btn:disabled { opacity: .4; cursor: default; }
 .upload-actions { display: flex; align-items: center; gap: .75rem; margin-top: .4rem; }
 .upload-progress { font-size: .8rem; color: #555; }
 

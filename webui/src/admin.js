@@ -177,8 +177,13 @@ async function renderProjects(content) {
     const editId = e.target.dataset.edit;
     const deleteId = e.target.dataset.delete;
     if (editId) {
-      const p = projects.find((x) => x.id === editId);
-      openProjectEditor(p);
+      // The list has no photos, so load the full project for the editor.
+      try {
+        const full = await api.projects.get(editId);
+        openProjectEditor(full.data);
+      } catch (err) {
+        alert("Ошибка загрузки проекта: " + err.message);
+      }
     }
     if (deleteId) {
       if (!confirm("Удалить проект и все его фотографии?")) return;
@@ -205,7 +210,7 @@ function openProjectEditor(project) {
   editor.innerHTML = `
     <div class="editor-card">
       <h3>${isNew ? "Новый проект" : "Редактировать проект"}</h3>
-      <form id="project-form" class="form" enctype="multipart/form-data" novalidate>
+      <form id="project-form" class="form" novalidate>
         <div class="form__row">
           <label class="form__label">Название *</label>
           <input name="title" class="form__input" value="${esc(project?.title ?? "")}" required>
@@ -223,8 +228,10 @@ function openProjectEditor(project) {
         </div>
         ${isNew ? `
         <div class="form__row">
-          <label class="form__label">Фотографии</label>
-          <input type="file" name="media" multiple accept="image/*" class="form__file">
+          <label class="form__label">Фотографии (можно выбрать несколько, в том числе в несколько заходов)</label>
+          <input type="file" id="new-media-input" multiple accept="image/*" class="form__file">
+          <p class="media-hint">${PHOTO_HINT}</p>
+          <div class="media-grid" id="new-media-list"></div>
         </div>` : ""}
         <div id="project-error" class="form__error hidden"></div>
         <div class="editor-card__actions">
@@ -232,10 +239,13 @@ function openProjectEditor(project) {
           <button type="button" class="btn btn--ghost" id="cancel-edit">Отмена</button>
         </div>
       </form>
-      ${!isNew ? renderMediaManager(project) : ""}
+      ${isNew ? "" : `<div class="media-manager" id="media-manager"></div>`}
     </div>`;
 
+  const pending = isNew ? setupPendingPhotos() : null;
+
   document.getElementById("cancel-edit").addEventListener("click", () => {
+    pending?.release();
     editor.classList.add("hidden");
   });
 
@@ -244,14 +254,20 @@ function openProjectEditor(project) {
     const errEl = document.getElementById("project-error");
     errEl.classList.add("hidden");
     const form = e.target;
+    const title = form.querySelector("[name=title]").value;
+    const description = form.querySelector("[name=description]").value;
+    const category = form.querySelector("[name=category]").value;
     try {
       if (isNew) {
-        const fd = new FormData(form);
+        const fd = new FormData();
+        fd.set("title", title);
+        fd.set("description", description);
+        fd.set("category", category);
+        for (const file of pending.files()) fd.append("media", file);
+        if (pending.files().length) fd.set("cover_index", String(pending.coverIndex()));
         await api.projects.create(fd);
+        pending.release();
       } else {
-        const title = form.querySelector("[name=title]").value;
-        const description = form.querySelector("[name=description]").value;
-        const category = form.querySelector("[name=category]").value;
         // The API replaces every field, so pass the current cover to keep it.
         await api.projects.update(project.id, {
           title, description, category, cover_media_id: project.cover_media_id ?? null,
@@ -266,69 +282,142 @@ function openProjectEditor(project) {
     }
   });
 
-  if (!isNew) {
-    setupMediaManager(project);
-  }
+  if (!isNew) mountMediaManager(project);
 }
 
-function renderMediaManager(project) {
-  const media = project.media ?? [];
+const PHOTO_HINT =
+  "Порядок фото — это порядок в галерее проекта на сайте; меняйте его стрелками ← →. " +
+  "Обложка показывается в карточке проекта и первой в его окне.";
+
+// One photo tile with order and cover controls; `index` is its 0-based position.
+function photoTile({ src, alt, index, total, isCover }) {
   return `
-    <div class="media-manager">
-      <h4>Фотографии</h4>
-      <div class="media-grid" id="media-grid-${project.id}">
-        ${media.map((m) => `
-          <div class="media-thumb" data-media-id="${m.id}">
-            <img src="${api.projects.mediaUrl(project.id, m.id)}" alt="${esc(m.filename)}" class="media-thumb__img">
-            <div class="media-thumb__actions">
-              <button class="btn btn--sm btn--ghost" data-set-cover="${m.id}">Обложка</button>
-              <button class="btn btn--sm btn--danger" data-del-media="${m.id}">&times;</button>
-            </div>
-          </div>`).join("")}
+    <div class="media-thumb ${isCover ? "media-thumb--cover" : ""}" data-index="${index}">
+      <div class="media-thumb__frame">
+        <img src="${src}" alt="${esc(alt)}" class="media-thumb__img">
+        <span class="media-thumb__pos">${index + 1}</span>
+        ${isCover ? `<span class="media-thumb__badge">Обложка</span>` : ""}
       </div>
-      <div class="form__row">
-        <label class="form__label">Добавить фото (можно выбрать несколько)</label>
-        <input type="file" id="add-media-input" accept="image/*" multiple class="form__file">
-        <div class="upload-actions">
-          <button class="btn btn--ghost btn--sm" id="add-media-btn">Загрузить</button>
-          <span id="upload-progress" class="upload-progress hidden"></span>
-        </div>
+      <div class="media-thumb__actions">
+        <button type="button" class="btn btn--sm btn--ghost" data-move="-1" ${index === 0 ? "disabled" : ""}
+          title="Раньше" aria-label="Сдвинуть фото ${index + 1} раньше">←</button>
+        <button type="button" class="btn btn--sm btn--ghost" data-move="1" ${index === total - 1 ? "disabled" : ""}
+          title="Позже" aria-label="Сдвинуть фото ${index + 1} позже">→</button>
+        <button type="button" class="btn btn--sm btn--ghost" data-cover ${isCover ? "disabled" : ""}
+          aria-pressed="${isCover}">Обложка</button>
+        <button type="button" class="btn btn--sm btn--danger" data-remove
+          title="Удалить" aria-label="Удалить фото ${index + 1}">&times;</button>
       </div>
     </div>`;
 }
 
-function setupMediaManager(project) {
-  const grid = document.getElementById(`media-grid-${project.id}`);
-  if (!grid) return;
+// Photos chosen for a new project: ordered and with a cover before anything is uploaded.
+function setupPendingPhotos() {
+  const input = document.getElementById("new-media-input");
+  const list = document.getElementById("new-media-list");
+  let items = []; // { file, url }
+  let cover = 0;
 
-  grid.addEventListener("click", async (e) => {
-    const mediaId = e.target.dataset.delMedia;
-    const coverId = e.target.dataset.setCover;
+  const render = () => {
+    list.innerHTML = items.map((item, i) => photoTile({
+      src: item.url, alt: item.file.name, index: i, total: items.length, isCover: i === cover,
+    })).join("");
+  };
 
-    if (mediaId) {
-      if (!confirm("Удалить фото?")) return;
-      try {
-        await api.projects.deleteMedia(project.id, mediaId);
-        const thumb = grid.querySelector(`[data-media-id="${mediaId}"]`);
-        thumb?.remove();
-      } catch (err) {
-        alert("Ошибка: " + err.message);
-      }
+  input.addEventListener("change", () => {
+    for (const file of input.files) items.push({ file, url: URL.createObjectURL(file) });
+    input.value = ""; // allows picking more files, including the same ones again
+    render();
+  });
+
+  list.addEventListener("click", (e) => {
+    const button = e.target.closest("button");
+    if (!button) return;
+    const i = Number(button.closest(".media-thumb").dataset.index);
+    if (button.dataset.move) {
+      const j = i + Number(button.dataset.move);
+      [items[i], items[j]] = [items[j], items[i]];
+      if (cover === i) cover = j;
+      else if (cover === j) cover = i;
+    } else if ("cover" in button.dataset) {
+      cover = i;
+    } else if ("remove" in button.dataset) {
+      URL.revokeObjectURL(items[i].url);
+      items.splice(i, 1);
+      if (i < cover || cover >= items.length) cover = Math.max(0, cover - 1);
     }
+    render();
+  });
 
-    if (coverId) {
-      try {
-        await api.projects.update(project.id, {
-          title: project.title,
-          description: project.description,
-          category: project.category,
-          cover_media_id: coverId,
-        });
-        project.cover_media_id = coverId;
-        alert("Обложка обновлена.");
-      } catch (err) {
-        alert("Ошибка: " + err.message);
+  return {
+    files: () => items.map((item) => item.file),
+    coverIndex: () => cover,
+    release: () => items.forEach((item) => URL.revokeObjectURL(item.url)),
+  };
+}
+
+// Photos of an existing project: every change is saved right away.
+function mountMediaManager(project) {
+  const box = document.getElementById("media-manager");
+  const media = project.media ?? [];
+  box.innerHTML = `
+    <h4>Фотографии</h4>
+    <p class="media-hint">${PHOTO_HINT}</p>
+    <div class="media-grid" id="media-grid">
+      ${media.length ? media.map((m, i) => photoTile({
+        src: api.projects.mediaUrl(project.id, m.id), alt: m.filename,
+        index: i, total: media.length, isCover: m.id === project.cover_media_id,
+      })).join("") : `<p class="empty">Фото пока нет.</p>`}
+    </div>
+    <div class="form__row">
+      <label class="form__label">Добавить фото (можно выбрать несколько, они встанут в конец)</label>
+      <input type="file" id="add-media-input" accept="image/*" multiple class="form__file">
+      <div class="upload-actions">
+        <button class="btn btn--ghost btn--sm" id="add-media-btn">Загрузить</button>
+        <span id="upload-progress" class="upload-progress hidden"></span>
+      </div>
+    </div>`;
+
+  // Reload the project (keeping the same object, which the form's save uses) and redraw.
+  const refresh = async () => {
+    const full = await api.projects.get(project.id);
+    Object.assign(project, full.data, { media: full.data.media ?? [] });
+    mountMediaManager(project);
+  };
+
+  const setCover = (coverId) => api.projects.update(project.id, {
+    title: project.title,
+    description: project.description,
+    category: project.category,
+    cover_media_id: coverId,
+  });
+
+  document.getElementById("media-grid").addEventListener("click", async (e) => {
+    const button = e.target.closest("button");
+    if (!button) return;
+    const i = Number(button.closest(".media-thumb").dataset.index);
+    const target = media[i];
+    try {
+      if (button.dataset.move) {
+        const ids = media.map((m) => m.id);
+        const j = i + Number(button.dataset.move);
+        [ids[i], ids[j]] = [ids[j], ids[i]];
+        await api.projects.reorderMedia(project.id, ids);
+      } else if ("cover" in button.dataset) {
+        await setCover(target.id);
+      } else if ("remove" in button.dataset) {
+        if (!confirm("Удалить фото?")) return;
+        await api.projects.deleteMedia(project.id, target.id);
+        // A deleted cover would leave the card without a picture: use the first remaining photo.
+        if (target.id === project.cover_media_id) {
+          const next = media.find((m) => m.id !== target.id);
+          await setCover(next ? next.id : null);
+        }
       }
+      await refresh();
+    } catch (err) {
+      alert("Ошибка: " + err.message);
+      await refresh();
     }
   });
 
@@ -354,8 +443,13 @@ function setupMediaManager(project) {
       }
     }
 
-    const full = await api.projects.get(project.id);
-    openProjectEditor(full.data);
+    // A project without a cover gets the first photo as its cover.
+    if (!project.cover_media_id) {
+      const full = await api.projects.get(project.id);
+      const first = full.data.media?.[0];
+      if (first) await setCover(first.id).catch(() => {});
+    }
+    await refresh();
 
     if (errors.length) {
       alert("Ошибка при загрузке некоторых файлов:\n" + errors.join("\n"));
