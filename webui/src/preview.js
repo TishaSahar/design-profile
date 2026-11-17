@@ -3,16 +3,23 @@
 //   { type: "project-preview", project: {title, description, category},
 //     number, coverUrl, galleryUrls, photoCount }
 // and the page draws it with the same markup as the public site.
-import { initPhotos, projectCardHTML, projectCaseHTML } from "./project-view.js";
+import { initPhotos, initCardGalleries, projectCardHTML, projectCaseHTML } from "./project-view.js";
 
 function render(data) {
   const grid = document.getElementById("preview-grid");
-  grid.innerHTML = projectCardHTML(data.project, { number: data.number, coverUrl: data.coverUrl });
+  const photoUrls = data.coverUrl ? [data.coverUrl, ...data.galleryUrls] : [];
+  grid.innerHTML = projectCardHTML(data.project, { number: data.number, photoUrls });
   const { meta, body } = projectCaseHTML(data.project, data);
   document.getElementById("case-meta").textContent = meta;
   document.getElementById("case-body").innerHTML = body;
   initPhotos(document.body);
+  initCardGalleries(grid);
 }
+
+// Links lead nowhere in the preview; the card's photo arrows still work.
+document.addEventListener("click", (e) => {
+  if (e.target.closest("a")) e.preventDefault();
+});
 
 window.addEventListener("message", (e) => {
   if (e.origin !== location.origin || e.data?.type !== "project-preview") return;

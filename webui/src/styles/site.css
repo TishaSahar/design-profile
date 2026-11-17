@@ -355,9 +355,47 @@ button { cursor: pointer; background: none; border: none; }
   gap: 4rem 2.5rem;
 }
 .projects-grid > .empty, .projects-grid > .error, .projects-grid > .loader { grid-column: 1 / -1; }
-.project-card a { display: flex; flex-direction: column; height: 100%; }
-/* Project covers (cards and the main photo in the case dialog) are portrait 2:3. */
-.project-card .photo { aspect-ratio: 2 / 3; margin-bottom: 1.25rem; }
+.project-card { display: flex; flex-direction: column; }
+.project-card__link { display: flex; flex-direction: column; flex: 1; }
+
+/* Card photos (portrait 2:3, like the cover in the case dialog): a row of slides
+   that scrolls sideways — swiped on touch screens, paged with the arrows by mouse. */
+.card-gallery { position: relative; aspect-ratio: 2 / 3; margin-bottom: 1.25rem; background: var(--espresso); }
+.card-gallery__track {
+  display: flex; height: 100%;
+  overflow-x: auto; overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory; scrollbar-width: none;
+}
+.card-gallery__track::-webkit-scrollbar { display: none; }
+.card-gallery__track .photo { flex: 0 0 100%; height: 100%; scroll-snap-align: start; scroll-snap-stop: always; }
+.card-gallery__nav {
+  position: absolute; top: 50%; z-index: 1;
+  width: 2.5rem; height: 2.5rem; margin-top: -1.25rem; border-radius: 50%;
+  display: grid; place-items: center;
+  background: rgba(248, 246, 242, .88); color: var(--charcoal);
+  font-family: var(--serif); font-size: 1.75rem; line-height: 1;
+  opacity: 0; transition: opacity .25s, background .2s;
+}
+.card-gallery__nav--prev { left: .75rem; }
+.card-gallery__nav--next { right: .75rem; }
+.card-gallery__nav:hover { background: var(--paper); }
+.project-card:hover .card-gallery__nav, .card-gallery__nav:focus-visible { opacity: 1; }
+/* Touch screens swipe instead. */
+@media (hover: none) { .card-gallery__nav { display: none; } }
+.card-gallery__dots {
+  position: absolute; left: 0; right: 0; bottom: .9rem;
+  display: flex; justify-content: center; gap: .35rem; pointer-events: none;
+}
+.card-gallery__dot {
+  width: .375rem; height: .375rem; border-radius: 50%;
+  background: rgba(248, 246, 242, .55); box-shadow: 0 0 3px rgba(30, 28, 26, .45);
+  transition: background .3s, transform .3s;
+}
+.card-gallery__dot.is-active { background: var(--paper); transform: scale(1.25); }
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+}
 .project-card__meta {
   display: flex;
   justify-content: space-between;

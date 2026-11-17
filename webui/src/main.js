@@ -2,6 +2,7 @@ import { api } from "./api.js";
 import { t, tRu, getLang, setLang, applyTranslations } from "./locales.js";
 import {
   CATEGORIES, categoryOf, esc, pad, photoHTML, initPhotos, projectCardHTML, projectCaseHTML,
+  projectPhotoUrls, initCardGalleries,
 } from "./project-view.js";
 
 // Prices in euros per m², by property type and service.
@@ -207,9 +208,10 @@ function renderProjects() {
   }
   grid.innerHTML = shown.map((p, i) => projectCardHTML(p, {
     number: i + 1,
-    coverUrl: p.cover_media_id ? api.projects.mediaUrl(p.id, p.cover_media_id) : null,
+    photoUrls: projectPhotoUrls(p, api.projects.mediaUrl),
   })).join("");
   initPhotos(grid);
+  initCardGalleries(grid);
 }
 
 // ── Project case dialog ──────────────────────────────────────────────────────
