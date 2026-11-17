@@ -101,7 +101,8 @@ type createProjectBody struct {
 // @Param        title        formData  string  true   "Project title"
 // @Param        description  formData  string  false  "Project description (max 500 chars)"
 // @Param        category     formData  string  false  "Work direction: residential (default) or commercial"
-// @Param        media        formData  file    false  "Media files (images)"
+// @Param        media        formData  file    false  "Media files (images), stored in the order sent"
+// @Param        cover_index  formData  int     false  "Index of the media file to use as the cover (0-based)"
 // @Success      201  {object}  map[string]interface{}
 // @Failure      400  {object}  map[string]string
 // @Router       /admin/projects [post]
@@ -118,7 +119,8 @@ func (h *ProjectHandler) CreateProject(c *gin.Context) {
 		return
 	}
 
-	// Handle optional media uploads.
+	// Handle optional media uploads, in the order they were sent.
+	var mediaIDs []uuid.UUID
 	form, _ := c.MultipartForm()
 	if form != nil {
 		files := form.File["media"]
@@ -132,10 +134,26 @@ func (h *ProjectHandler) CreateProject(c *gin.Context) {
 			f.Close()
 
 			ct := fh.Header.Get("Content-Type")
-			if _, err := h.svc.AddMedia(c.Request.Context(), project.ID, data, ct, fh.Filename, i); err != nil {
+			media, err := h.svc.AddMedia(c.Request.Context(), project.ID, data, ct, fh.Filename, i)
+			if err != nil {
 				badRequest(c, err.Error())
 				return
 			}
+			mediaIDs = append(mediaIDs, media.ID)
+		}
+	}
+
+	// Optional cover: one of the files just uploaded.
+	if raw := c.PostForm("cover_index"); raw != "" {
+		idx, err := strconv.Atoi(raw)
+		if err != nil || idx < 0 || idx >= len(mediaIDs) {
+			badRequest(c, "cover_index must point to one of the uploaded files")
+			return
+		}
+		cover := mediaIDs[idx]
+		if _, err := h.svc.Update(c.Request.Context(), project.ID, project.Title, project.Description, project.Category, &cover); err != nil {
+			internalError(c, "failed to set the cover")
+			return
 		}
 	}
 
@@ -226,7 +244,7 @@ func (h *ProjectHandler) DeleteProject(c *gin.Context) {
 // @Security     BearerAuth
 // @Param        id         path      string  true  "Project UUID"
 // @Param        media      formData  file    true  "Image file"
-// @Param        sortOrder  formData  int     false "Sort order"
+// @Param        sortOrder  formData  int     false "Position among the project's photos; appended at the end when omitted"
 // @Success      201 {object}  map[string]interface{}
 // @Failure      400 {object}  map[string]string
 // @Router       /admin/projects/{id}/media [post]
@@ -253,8 +271,16 @@ func (h *ProjectHandler) AddMedia(c *gin.Context) {
 	data, _ := io.ReadAll(f)
 	ct := fh.Header.Get("Content-Type")
 
-	sortOrderStr := c.DefaultPostForm("sortOrder", "0")
-	sortOrder, _ := strconv.Atoi(sortOrderStr)
+	// Without an explicit position the photo goes after the existing ones.
+	sortOrder := -1
+	if raw := c.PostForm("sortOrder"); raw != "" {
+		parsed, err := strconv.Atoi(raw)
+		if err != nil || parsed < 0 {
+			badRequest(c, "sortOrder must be a non-negative integer")
+			return
+		}
+		sortOrder = parsed
+	}
 
 	media, err := h.svc.AddMedia(c.Request.Context(), projectID, data, ct, fh.Filename, sortOrder)
 	if err != nil {
@@ -262,6 +288,97 @@ func (h *ProjectHandler) AddMedia(c *gin.Context) {
 		return
 	}
 	created(c, media)
+}
+
+type reorderProjectsBody struct {
+	Category   string   `json:"category"    binding:"required" example:"residential"`
+	ProjectIDs []string `json:"project_ids" binding:"required"`
+}
+
+// ReorderProjects godoc
+// @Summary      Reorder projects of a category (admin)
+// @Description  Sets the order of a category's projects on the public site; project_ids must list every project of the category exactly once.
+// @Tags         admin
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        body  body      reorderProjectsBody  true  "Category and project IDs in the new order"
+// @Success      200   {object}  map[string]interface{}
+// @Failure      400   {object}  map[string]string
+// @Router       /admin/projects/order [put]
+func (h *ProjectHandler) ReorderProjects(c *gin.Context) {
+	var body reorderProjectsBody
+	if err := c.ShouldBindJSON(&body); err != nil {
+		badRequest(c, err.Error())
+		return
+	}
+	ids := make([]uuid.UUID, 0, len(body.ProjectIDs))
+	for _, raw := range body.ProjectIDs {
+		id, err := uuid.Parse(raw)
+		if err != nil {
+			badRequest(c, "invalid project id: "+raw)
+			return
+		}
+		ids = append(ids, id)
+	}
+	if err := h.svc.ReorderProjects(c.Request.Context(), body.Category, ids); err != nil {
+		badRequest(c, err.Error())
+		return
+	}
+	projects, err := h.svc.List(c.Request.Context())
+	if err != nil {
+		internalError(c, "failed to list projects")
+		return
+	}
+	ok(c, projects)
+}
+
+type reorderMediaBody struct {
+	MediaIDs []string `json:"media_ids" binding:"required"`
+}
+
+// ReorderMedia godoc
+// @Summary      Reorder project photos (admin)
+// @Description  Sets the order of all photos of a project; media_ids must list every photo exactly once.
+// @Tags         admin
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id    path      string            true  "Project UUID"
+// @Param        body  body      reorderMediaBody  true  "Photo IDs in the new order"
+// @Success      200   {object}  map[string]interface{}
+// @Failure      400   {object}  map[string]string
+// @Router       /admin/projects/{id}/media/order [put]
+func (h *ProjectHandler) ReorderMedia(c *gin.Context) {
+	projectID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		badRequest(c, "invalid project id")
+		return
+	}
+	var body reorderMediaBody
+	if err := c.ShouldBindJSON(&body); err != nil {
+		badRequest(c, err.Error())
+		return
+	}
+	ids := make([]uuid.UUID, 0, len(body.MediaIDs))
+	for _, raw := range body.MediaIDs {
+		id, err := uuid.Parse(raw)
+		if err != nil {
+			badRequest(c, "invalid media id: "+raw)
+			return
+		}
+		ids = append(ids, id)
+	}
+	if err := h.svc.ReorderMedia(c.Request.Context(), projectID, ids); err != nil {
+		badRequest(c, err.Error())
+		return
+	}
+	project, err := h.svc.GetByID(c.Request.Context(), projectID)
+	if err != nil {
+		internalError(c, "failed to load project")
+		return
+	}
+	ok(c, project)
 }
 
 // DeleteMedia godoc

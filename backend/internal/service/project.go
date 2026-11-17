@@ -21,6 +21,8 @@ type projectRepo interface {
 	AddMedia(ctx context.Context, projectID uuid.UUID, data []byte, contentType, filename string, sortOrder int) (*model.Media, error)
 	GetMediaData(ctx context.Context, mediaID uuid.UUID) ([]byte, string, error)
 	DeleteMedia(ctx context.Context, mediaID uuid.UUID) error
+	ReorderMedia(ctx context.Context, projectID uuid.UUID, mediaIDs []uuid.UUID) error
+	ReorderProjects(ctx context.Context, category string, projectIDs []uuid.UUID) error
 }
 
 // Project categories: the two work directions shown on the public site.
@@ -110,6 +112,69 @@ func (s *ProjectService) AddMedia(ctx context.Context, projectID uuid.UUID, data
 // GetMediaData returns the raw bytes and content type for a media file.
 func (s *ProjectService) GetMediaData(ctx context.Context, mediaID uuid.UUID) ([]byte, string, error) {
 	return s.repo.GetMediaData(ctx, mediaID)
+}
+
+// ReorderProjects sets the order of one category's projects on the public site.
+// The list must contain every project of the category exactly once.
+func (s *ProjectService) ReorderProjects(ctx context.Context, category string, projectIDs []uuid.UUID) error {
+	if category == "" {
+		return fmt.Errorf("category is required")
+	}
+	category, err := normalizeCategory(category)
+	if err != nil {
+		return err
+	}
+	projects, err := s.repo.List(ctx)
+	if err != nil {
+		return err
+	}
+	inCategory := make(map[uuid.UUID]bool)
+	for _, p := range projects {
+		if p.Category == category {
+			inCategory[p.ID] = true
+		}
+	}
+	if len(projectIDs) != len(inCategory) {
+		return fmt.Errorf("the order must list all %d projects of the category", len(inCategory))
+	}
+	seen := make(map[uuid.UUID]bool, len(projectIDs))
+	for _, id := range projectIDs {
+		if !inCategory[id] {
+			return fmt.Errorf("project %s is not in category %s", id, category)
+		}
+		if seen[id] {
+			return fmt.Errorf("project %s is listed twice", id)
+		}
+		seen[id] = true
+	}
+	return s.repo.ReorderProjects(ctx, category, projectIDs)
+}
+
+// ReorderMedia puts the project's photos in the given order. The list must
+// contain every photo of the project exactly once.
+func (s *ProjectService) ReorderMedia(ctx context.Context, projectID uuid.UUID, mediaIDs []uuid.UUID) error {
+	project, err := s.repo.GetByID(ctx, projectID)
+	if err != nil {
+		return fmt.Errorf("project not found: %w", err)
+	}
+	if len(mediaIDs) != len(project.Media) {
+		return fmt.Errorf("the order must list all %d photos of the project", len(project.Media))
+	}
+	owned := make(map[uuid.UUID]bool, len(project.Media))
+	for _, m := range project.Media {
+		owned[m.ID] = true
+	}
+	seen := make(map[uuid.UUID]bool, len(mediaIDs))
+	for _, id := range mediaIDs {
+		if !owned[id] {
+			return fmt.Errorf("photo %s does not belong to this project", id)
+		}
+		if seen[id] {
+			return fmt.Errorf("photo %s is listed twice", id)
+		}
+		seen[id] = true
+	}
+	return s.repo.ReorderMedia(ctx, projectID, mediaIDs)
 }
 
 // DeleteMedia removes a media file.

@@ -23,9 +23,11 @@ type Project struct {
 	Description  string     `json:"description"            db:"description"`
 	Category     string     `json:"category"               db:"category"`
 	CoverMediaID *uuid.UUID `json:"cover_media_id,omitempty" db:"cover_media_id"`
-	CreatedAt    time.Time  `json:"created_at"             db:"created_at"`
-	UpdatedAt    time.Time  `json:"updated_at"             db:"updated_at"`
-	Media        []Media    `json:"media,omitempty"        db:"-"`
+	// SortOrder is the position within the category on the public site (0 = first).
+	SortOrder int       `json:"sort_order"             db:"sort_order"`
+	CreatedAt time.Time `json:"created_at"             db:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"             db:"updated_at"`
+	Media     []Media   `json:"media,omitempty"        db:"-"`
 }
 
 // Media represents a binary media file attached to a project.

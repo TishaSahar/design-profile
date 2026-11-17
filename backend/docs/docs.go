@@ -75,14 +75,69 @@ const docTemplate = `{
                     },
                     {
                         "type": "file",
-                        "description": "Media files (images)",
+                        "description": "Media files (images), stored in the order sent",
                         "name": "media",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Index of the media file to use as the cover (0-based)",
+                        "name": "cover_index",
                         "in": "formData"
                     }
                 ],
                 "responses": {
                     "201": {
                         "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/projects/order": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Sets the order of a category's projects on the public site; project_ids must list every project of the category exactly once.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Reorder projects of a category (admin)",
+                "parameters": [
+                    {
+                        "description": "Category and project IDs in the new order",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.reorderProjectsBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -235,7 +290,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
-                        "description": "Sort order",
+                        "description": "Position among the project's photos; appended at the end when omitted",
                         "name": "sortOrder",
                         "in": "formData"
                     }
@@ -243,6 +298,62 @@ const docTemplate = `{
                 "responses": {
                     "201": {
                         "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/projects/{id}/media/order": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Sets the order of all photos of a project; media_ids must list every photo exactly once.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Reorder project photos (admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Photo IDs in the new order",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.reorderMediaBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -845,6 +956,39 @@ const docTemplate = `{
                 "status": {
                     "type": "string",
                     "example": "ok"
+                }
+            }
+        },
+        "handler.reorderMediaBody": {
+            "type": "object",
+            "required": [
+                "media_ids"
+            ],
+            "properties": {
+                "media_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "handler.reorderProjectsBody": {
+            "type": "object",
+            "required": [
+                "category",
+                "project_ids"
+            ],
+            "properties": {
+                "category": {
+                    "type": "string",
+                    "example": "residential"
+                },
+                "project_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
