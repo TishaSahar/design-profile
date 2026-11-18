@@ -351,11 +351,11 @@ button { cursor: pointer; background: none; border: none; }
 .projects-grid {
   margin-top: 3.5rem;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 4rem 2.5rem;
 }
 .projects-grid > .empty, .projects-grid > .error, .projects-grid > .loader { grid-column: 1 / -1; }
-.project-card { display: flex; flex-direction: column; }
+.project-card { display: flex; flex-direction: column; min-width: 0; } /* the photo strip must not widen the grid column */
 .project-card__link { display: flex; flex-direction: column; flex: 1; }
 
 /* Card photos (portrait 2:3, like the cover in the case dialog): a row of slides
@@ -708,7 +708,7 @@ input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; background: v
   .case__gallery { columns: 2; }
   .directions { grid-template-columns: 1fr; }
   .direction--residential { border-right: none; border-bottom: 1px solid var(--hairline); }
-  .projects-grid { grid-template-columns: repeat(2, 1fr); }
+  .projects-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .service-cards { grid-template-columns: 1fr; max-width: 40rem; margin: 0 auto; }
   .calc { grid-template-columns: 1fr; }
   .about__grid, .faq, .contacts__grid { grid-template-columns: 1fr; }
@@ -723,7 +723,9 @@ input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; background: v
   .header-cta { display: none; }
   .brand__role { display: none; }
   .hero__meta-extra { display: none; }
-  .projects-grid { grid-template-columns: 1fr; }
+  /* Two cards per row on large phones / small tablets, so a card never fills the screen. */
+  .projects-grid { gap: 3rem 1.25rem; }
+  .project-card__title { font-size: 1.375rem; }
   .process__step { grid-template-columns: 1fr; gap: .5rem; }
   .field-grid--2, .field-grid--3, .field-grid--order { grid-template-columns: 1fr; }
   .about__facts { grid-template-columns: 1fr; }
@@ -734,4 +736,10 @@ input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; background: v
   .case__gallery { columns: 1; }
   .sample-sheets { grid-template-columns: 1fr; }
   .service-card__actions { flex-direction: column; }
+}
+/* Phones: one card per row, but a shorter photo (4:5, at most ~60% of the screen),
+   so the title of the card and the start of the next one are visible. */
+@media (max-width: 539px) {
+  .projects-grid { grid-template-columns: minmax(0, 1fr); gap: 2.5rem; margin-top: 2.5rem; }
+  .card-gallery { aspect-ratio: 4 / 5; max-height: 60svh; width: 100%; }
 }
