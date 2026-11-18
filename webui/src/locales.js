@@ -177,7 +177,7 @@ export const LOCALES = {
     err_consent: "Необходимо согласие на обработку персональных данных.",
     err_load: "Не удалось загрузить данные:",
 
-    footer_role: "Olga Sakha — Interior Architect",
+    footer_role: "Olga Sakha — Interior Design",
     footer_copy: `© 2018–${YEAR} SAKHA DESIGN. Все права защищены.`,
 
     sample_kicker: "Пример результата услуги",
@@ -212,7 +212,7 @@ export const LOCALES = {
   },
 
   en: {
-    site_title: "OLGA SAKHA — Interior Architect | SAKHA DESIGN",
+    site_title: "OLGA SAKHA — Interior Design | SAKHA DESIGN",
     lang_label: "Язык / Language",
 
     nav_projects: "Projects",
@@ -334,7 +334,7 @@ export const LOCALES = {
 
     about_kicker: "About me • Olga Sakha",
     about_quote: "“Every square metre should work for your comfort and stay relevant for years”",
-    about_portrait_alt: "Olga Sakha — Interior Architect",
+    about_portrait_alt: "Olga Sakha — Interior Design",
     about_interior_alt: "Interior designed by Olga Sakha",
     about_facts: [
       { label: "Education", value: "Degree in civil engineering (NNGASU)" },
@@ -386,7 +386,7 @@ export const LOCALES = {
     err_consent: "You must consent to the processing of personal data.",
     err_load: "Could not load data:",
 
-    footer_role: "Olga Sakha — Interior Architect",
+    footer_role: "Olga Sakha — Interior Design",
     footer_copy: `© 2018–${YEAR} SAKHA DESIGN. All rights reserved.`,
 
     sample_kicker: "Service deliverable sample",
