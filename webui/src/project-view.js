@@ -228,20 +228,18 @@ export function initCardGalleries(root) {
 }
 
 // Case dialog: `meta` goes to the dialog bar, `body` to the dialog body.
-// The cover comes first; `galleryUrls` are the other photos in order.
 export function projectCaseHTML(p, { coverUrl, galleryUrls, photoCount }) {
+  // The cover opens the gallery as an ordinary photo, followed by the rest in order.
+  const photos = coverUrl ? [coverUrl, ...galleryUrls] : galleryUrls;
   return {
     meta: `${t(`category_${categoryOf(p)}`)} • ${t("project_photos", photoCount)}`,
     body: `
       <h3 class="dialog__title" id="case-title">${esc(p.title)}</h3>
-      ${coverUrl
-        ? photoHTML(coverUrl, p.title, "case__cover")
-        : `<p class="muted">${t("case_no_photos")}</p>`}
       ${p.description ? `<p class="dialog__text">${esc(p.description)}</p>` : ""}
-      ${galleryUrls.length ? `
+      ${photos.length ? `
         <div class="case__gallery">
-          ${galleryUrls.map((url, i) => photoHTML(url, `${p.title} — ${i + 2}`)).join("")}
-        </div>` : ""}
+          ${photos.map((url, i) => photoHTML(url, i ? `${p.title} — ${i + 1}` : p.title)).join("")}
+        </div>` : `<p class="muted">${t("case_no_photos")}</p>`}
       <div class="case__cta">
         <span>${t("case_cta_text")}</span>
         <button class="btn btn--dark" data-order="concept" data-order-type="${categoryOf(p)}">${t("case_cta_btn")}</button>

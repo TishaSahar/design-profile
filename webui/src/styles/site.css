@@ -672,10 +672,10 @@ input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; background: v
 .dialog__title { font-family: var(--serif); font-weight: 300; font-size: clamp(2rem, 4vw, 3rem); line-height: 1.1; }
 .dialog__text { font-size: 14px; line-height: 1.75; color: rgba(30, 28, 26, .85); white-space: pre-line; }
 /* The main photo is limited so that its height stays within 75% of the screen. */
-.case__cover { aspect-ratio: 2 / 3; width: min(100%, 28rem, 50vh); justify-self: center; }
 /* Gallery photos keep their own proportions; columns pack them like a masonry wall. */
-.case__gallery { columns: 3; column-gap: 1.5rem; }
-.case__gallery .photo { break-inside: avoid; margin-bottom: 1.5rem; }
+/* Rows, not newspaper columns: photos read left to right, then top to bottom,
+   in the order set in the admin panel. */
+.case__gallery { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; align-items: start; }
 .case__gallery .photo img { height: auto; }
 .case__cta { padding-top: 1.5rem; border-top: 1px solid var(--hairline); display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; font-size: 13px; color: var(--muted); }
 
@@ -705,7 +705,7 @@ input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; background: v
   .hero { min-height: 88vh; }
 }
 @media (max-width: 1023px) {
-  .case__gallery { columns: 2; }
+  .case__gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .directions { grid-template-columns: 1fr; }
   .direction--residential { border-right: none; border-bottom: 1px solid var(--hairline); }
   .projects-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -733,7 +733,7 @@ input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; background: v
   .about__portrait { margin-left: auto; margin-right: auto; }
   .direction__vertical { display: none; }
   .direction__bottom { flex-direction: column; align-items: flex-start; }
-  .case__gallery { columns: 1; }
+  .case__gallery { grid-template-columns: minmax(0, 1fr); }
   .sample-sheets { grid-template-columns: 1fr; }
   .service-card__actions { flex-direction: column; }
 }
