@@ -15,8 +15,8 @@ import (
 type projectRepo interface {
 	List(ctx context.Context) ([]model.Project, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*model.Project, error)
-	Create(ctx context.Context, title, description, category string) (*model.Project, error)
-	Update(ctx context.Context, id uuid.UUID, title, description, category string, coverMediaID *uuid.UUID) (*model.Project, error)
+	Create(ctx context.Context, f model.ProjectFields) (*model.Project, error)
+	Update(ctx context.Context, id uuid.UUID, f model.ProjectFields, coverMediaID *uuid.UUID) (*model.Project, error)
 	Delete(ctx context.Context, id uuid.UUID) error
 	AddMedia(ctx context.Context, projectID uuid.UUID, data []byte, contentType, filename string, sortOrder int) (*model.Media, error)
 	GetMediaData(ctx context.Context, mediaID uuid.UUID) ([]byte, string, error)
@@ -44,16 +44,28 @@ func normalizeCategory(category string) (string, error) {
 	}
 }
 
-func validateProject(title, description string) error {
-	if title == "" {
-		return fmt.Errorf("title is required")
+// prepareProject validates the fields and defaults an empty category.
+func prepareProject(f model.ProjectFields) (model.ProjectFields, error) {
+	if f.Title == "" {
+		return f, fmt.Errorf("title is required")
 	}
 	// Characters, not bytes: Cyrillic letters take two bytes each, and the
-	// column is VARCHAR(500) characters.
-	if utf8.RuneCountInString(description) > 500 {
-		return fmt.Errorf("description must not exceed 500 characters")
+	// columns are VARCHAR(255) and VARCHAR(500) characters.
+	if utf8.RuneCountInString(f.TitleEN) > 255 {
+		return f, fmt.Errorf("English title must not exceed 255 characters")
 	}
-	return nil
+	if utf8.RuneCountInString(f.Description) > 500 {
+		return f, fmt.Errorf("description must not exceed 500 characters")
+	}
+	if utf8.RuneCountInString(f.DescriptionEN) > 500 {
+		return f, fmt.Errorf("English description must not exceed 500 characters")
+	}
+	category, err := normalizeCategory(f.Category)
+	if err != nil {
+		return f, err
+	}
+	f.Category = category
+	return f, nil
 }
 
 type ProjectService struct {
@@ -72,26 +84,20 @@ func (s *ProjectService) GetByID(ctx context.Context, id uuid.UUID) (*model.Proj
 	return s.repo.GetByID(ctx, id)
 }
 
-func (s *ProjectService) Create(ctx context.Context, title, description, category string) (*model.Project, error) {
-	if err := validateProject(title, description); err != nil {
-		return nil, err
-	}
-	category, err := normalizeCategory(category)
+func (s *ProjectService) Create(ctx context.Context, f model.ProjectFields) (*model.Project, error) {
+	f, err := prepareProject(f)
 	if err != nil {
 		return nil, err
 	}
-	return s.repo.Create(ctx, title, description, category)
+	return s.repo.Create(ctx, f)
 }
 
-func (s *ProjectService) Update(ctx context.Context, id uuid.UUID, title, description, category string, coverMediaID *uuid.UUID) (*model.Project, error) {
-	if err := validateProject(title, description); err != nil {
-		return nil, err
-	}
-	category, err := normalizeCategory(category)
+func (s *ProjectService) Update(ctx context.Context, id uuid.UUID, f model.ProjectFields, coverMediaID *uuid.UUID) (*model.Project, error) {
+	f, err := prepareProject(f)
 	if err != nil {
 		return nil, err
 	}
-	return s.repo.Update(ctx, id, title, description, category, coverMediaID)
+	return s.repo.Update(ctx, id, f, coverMediaID)
 }
 
 func (s *ProjectService) Delete(ctx context.Context, id uuid.UUID) error {

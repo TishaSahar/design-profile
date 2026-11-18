@@ -1,11 +1,15 @@
 // Admin preview of a project (preview.html inside an iframe of admin.html).
 // The admin page sends the project — possibly unsaved — with postMessage:
-//   { type: "project-preview", project: {title, description, category},
-//     number, coverUrl, galleryUrls, photoCount }
+//   { type: "project-preview", project: {title, title_en, description, description_en, category},
+//     number, coverUrl, galleryUrls, lang }
 // and the page draws it with the same markup as the public site.
+import { setPageLang, applyTranslations } from "./locales.js";
 import { initPhotos, initCardGalleries, projectCardHTML, projectCaseHTML } from "./project-view.js";
 
 function render(data) {
+  // The language the admin picked in the preview; the site's saved choice stays as it is.
+  setPageLang(data.lang ?? "ru");
+  applyTranslations();
   const grid = document.getElementById("preview-grid");
   const photoUrls = data.coverUrl ? [data.coverUrl, ...data.galleryUrls] : [];
   grid.innerHTML = projectCardHTML(data.project, { number: data.number, photoUrls });

@@ -57,8 +57,20 @@
                     },
                     {
                         "type": "string",
+                        "description": "English title (empty: the Russian one is shown)",
+                        "name": "title_en",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
                         "description": "Project description (max 500 chars)",
                         "name": "description",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "English description (max 500 chars; empty: the Russian one is shown)",
+                        "name": "description_en",
                         "in": "formData"
                     },
                     {
@@ -156,7 +168,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Updates a project's title, description, category (residential by default) and cover photo. All fields are replaced, so send the current cover_media_id to keep the cover.",
+                "description": "Updates a project's title, description (Russian and English), category (residential by default) and cover photo. All fields are replaced, so send the current cover_media_id to keep the cover.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1013,7 +1025,13 @@
                 "description": {
                     "type": "string"
                 },
+                "description_en": {
+                    "type": "string"
+                },
                 "title": {
+                    "type": "string"
+                },
+                "title_en": {
                     "type": "string"
                 }
             }

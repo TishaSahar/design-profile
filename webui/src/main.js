@@ -239,7 +239,6 @@ function renderCase() {
   const { meta, body } = projectCaseHTML(p, {
     coverUrl: coverId ? api.projects.mediaUrl(p.id, coverId) : null,
     galleryUrls: media.filter((m) => m.id !== coverId).map((m) => api.projects.mediaUrl(p.id, m.id)),
-    photoCount: media.length,
   });
   $("case-meta").textContent = meta;
   $("case-body").innerHTML = body;

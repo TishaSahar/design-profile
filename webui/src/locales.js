@@ -44,7 +44,6 @@ export const LOCALES = {
     card_prev: "Предыдущее фото",
     card_next: "Следующее фото",
     card_photo: (i, n) => `Фото ${i} из ${n}`,
-    project_photos: (n) => `${n} фото`,
     case_no_photos: "Фотографии проекта будут добавлены.",
     case_cta_text: "Хотите похожее решение для вашего пространства?",
     case_cta_btn: "Обсудить похожий проект",
@@ -255,7 +254,6 @@ export const LOCALES = {
     card_prev: "Previous photo",
     card_next: "Next photo",
     card_photo: (i, n) => `Photo ${i} of ${n}`,
-    project_photos: (n) => `${n} ${n === 1 ? "photo" : "photos"}`,
     case_no_photos: "Project photos will be added.",
     case_cta_text: "Would you like a similar solution for your space?",
     case_cta_btn: "Discuss a similar project",
@@ -423,7 +421,16 @@ export const LOCALES = {
   },
 };
 
+// Language forced for this page only (the admin preview), not saved for the site.
+let pageLang = null;
+
+export function setPageLang(lang) {
+  pageLang = LOCALES[lang] ? lang : null;
+  if (pageLang) document.documentElement.lang = pageLang;
+}
+
 export function getLang() {
+  if (pageLang) return pageLang;
   try {
     return localStorage.getItem("lang") || "ru";
   } catch {

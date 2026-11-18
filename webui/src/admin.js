@@ -252,16 +252,15 @@ const PROJECT_CATEGORIES = {
 let projectPositions = new Map();
 
 // Preview message for a saved project: its photos as published (the cover first, then
-// the rest in order) with `fields` (title, description, category), possibly unsaved edits.
+// the rest in order) with `fields` (texts and category, see readProjectFields), possibly unsaved edits.
 function savedProjectPreview(project, fields, number) {
   const media = project.media ?? [];
   const coverId = project.cover_media_id ?? media[0]?.id;
   return {
-    project: { title: fields.title, description: fields.description ?? "", category: fields.category },
+    project: fields,
     number,
     coverUrl: coverId ? api.projects.mediaUrl(project.id, coverId) : null,
     galleryUrls: media.filter((m) => m.id !== coverId).map((m) => api.projects.mediaUrl(project.id, m.id)),
-    photoCount: media.length,
   };
 }
 
@@ -280,6 +279,10 @@ function openProjectPreview(data) {
           <div class="segmented" role="group" aria-label="Ширина экрана">
             <button type="button" class="segmented__btn" data-width="desktop" aria-pressed="true">Компьютер</button>
             <button type="button" class="segmented__btn" data-width="phone" aria-pressed="false">Телефон</button>
+          </div>
+          <div class="segmented" role="group" aria-label="Язык сайта">
+            <button type="button" class="segmented__btn" data-lang="ru" aria-pressed="true">RU</button>
+            <button type="button" class="segmented__btn" data-lang="en" aria-pressed="false">EN</button>
           </div>
           <button type="button" class="btn btn--ghost btn--sm" data-close-preview>Закрыть</button>
         </div>
@@ -308,7 +311,8 @@ function openProjectPreview(data) {
   fit();
   window.addEventListener("resize", fit);
 
-  const send = () => frame.contentWindow.postMessage({ type: "project-preview", ...data }, location.origin);
+  let lang = "ru";
+  const send = () => frame.contentWindow.postMessage({ type: "project-preview", ...data, lang }, location.origin);
   const onMessage = (e) => {
     if (e.source === frame.contentWindow && e.data?.type === "project-preview-ready") send();
   };
@@ -332,6 +336,12 @@ function openProjectPreview(data) {
       phone = widthBtn.dataset.width === "phone";
       frame.classList.toggle("preview-panel__frame--phone", phone);
       fit();
+    }
+    const langBtn = e.target.closest("[data-lang]");
+    if (langBtn) {
+      overlay.querySelectorAll("[data-lang]").forEach((b) => b.setAttribute("aria-pressed", String(b === langBtn)));
+      lang = langBtn.dataset.lang;
+      send();
     }
   });
   overlay.querySelector("[data-close-preview]").focus();
@@ -423,12 +433,23 @@ function openProjectEditor(project) {
       <h3>${isNew ? "Новый проект" : "Редактировать проект"}</h3>
       <form id="project-form" class="form" novalidate>
         <div class="form__row">
-          <label class="form__label">Название *</label>
-          <input name="title" class="form__input" value="${esc(project?.title ?? "")}" required>
+          <label class="form__label" for="project-title">Название *</label>
+          <input id="project-title" name="title" class="form__input" value="${esc(project?.title ?? "")}" required>
         </div>
         <div class="form__row">
-          <label class="form__label">Описание (до 500 символов)</label>
-          <textarea name="description" class="form__textarea" rows="3" maxlength="500">${esc(project?.description ?? "")}</textarea>
+          <label class="form__label" for="project-title-en">Название на английском</label>
+          <input id="project-title-en" name="title_en" class="form__input" lang="en" maxlength="255"
+            value="${esc(project?.title_en ?? "")}" aria-describedby="project-en-hint">
+        </div>
+        <div class="form__row">
+          <label class="form__label" for="project-description">Описание (до 500 символов)</label>
+          <textarea id="project-description" name="description" class="form__textarea" rows="3" maxlength="500">${esc(project?.description ?? "")}</textarea>
+        </div>
+        <div class="form__row">
+          <label class="form__label" for="project-description-en">Описание на английском (до 500 символов)</label>
+          <textarea id="project-description-en" name="description_en" class="form__textarea" rows="3" maxlength="500"
+            lang="en" aria-describedby="project-en-hint">${esc(project?.description_en ?? "")}</textarea>
+          <p class="form__hint" id="project-en-hint">Для английской версии сайта. Если оставить поле пустым, там будет показан русский текст.</p>
         </div>
         <div class="form__row">
           <label class="form__label">Направление</label>
@@ -456,12 +477,8 @@ function openProjectEditor(project) {
   const pending = isNew ? setupPendingPhotos() : null;
 
   document.getElementById("preview-project").addEventListener("click", () => {
-    const form = document.getElementById("project-form");
-    const fields = {
-      title: form.querySelector("[name=title]").value.trim() || "Без названия",
-      description: form.querySelector("[name=description]").value.trim(),
-      category: form.querySelector("[name=category]").value,
-    };
+    const fields = readProjectFields(document.getElementById("project-form"));
+    fields.title ||= "Без названия";
     if (isNew) {
       // New projects go to the top of their direction.
       openProjectPreview({ project: fields, number: 1, ...pending.previewUrls() });
@@ -481,25 +498,18 @@ function openProjectEditor(project) {
     e.preventDefault();
     const errEl = document.getElementById("project-error");
     errEl.classList.add("hidden");
-    const form = e.target;
-    const title = form.querySelector("[name=title]").value;
-    const description = form.querySelector("[name=description]").value;
-    const category = form.querySelector("[name=category]").value;
+    const fields = readProjectFields(e.target);
     try {
       if (isNew) {
         const fd = new FormData();
-        fd.set("title", title);
-        fd.set("description", description);
-        fd.set("category", category);
+        for (const [name, value] of Object.entries(fields)) fd.set(name, value);
         for (const file of pending.files()) fd.append("media", file);
         if (pending.files().length) fd.set("cover_index", String(pending.coverIndex()));
         await api.projects.create(fd);
         pending.release();
       } else {
         // The API replaces every field, so pass the current cover to keep it.
-        await api.projects.update(project.id, {
-          title, description, category, cover_media_id: project.cover_media_id ?? null,
-        });
+        await api.projects.update(project.id, { ...fields, cover_media_id: project.cover_media_id ?? null });
       }
       editor.classList.add("hidden");
       const content = document.getElementById("admin-content");
@@ -511,6 +521,18 @@ function openProjectEditor(project) {
   });
 
   if (!isNew) mountMediaManager(project);
+}
+
+// Texts and category from the project form, as the API takes them.
+function readProjectFields(form) {
+  const value = (name) => form.querySelector(`[name=${name}]`).value.trim();
+  return {
+    title: value("title"),
+    title_en: value("title_en"),
+    description: value("description"),
+    description_en: value("description_en"),
+    category: value("category"),
+  };
 }
 
 // Tooltip over each photo (shown on hover, see [data-tooltip] in main.css).
@@ -594,7 +616,6 @@ function setupPendingPhotos() {
       return {
         coverUrl,
         galleryUrls: items.filter((_, i) => i !== cover()).map((item) => item.url),
-        photoCount: items.length,
       };
     },
     files: () => items.map((item) => item.file),
