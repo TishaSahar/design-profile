@@ -31,16 +31,16 @@ func (m *mockProjectRepo) GetByID(ctx context.Context, id uuid.UUID) (*model.Pro
 	return args.Get(0).(*model.Project), args.Error(1)
 }
 
-func (m *mockProjectRepo) Create(ctx context.Context, title, description, category string) (*model.Project, error) {
-	args := m.Called(ctx, title, description, category)
+func (m *mockProjectRepo) Create(ctx context.Context, f model.ProjectFields) (*model.Project, error) {
+	args := m.Called(ctx, f)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*model.Project), args.Error(1)
 }
 
-func (m *mockProjectRepo) Update(ctx context.Context, id uuid.UUID, title, description, category string, coverMediaID *uuid.UUID) (*model.Project, error) {
-	args := m.Called(ctx, id, title, description, category, coverMediaID)
+func (m *mockProjectRepo) Update(ctx context.Context, id uuid.UUID, f model.ProjectFields, coverMediaID *uuid.UUID) (*model.Project, error) {
+	args := m.Called(ctx, id, f, coverMediaID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -76,17 +76,22 @@ func (m *mockProjectRepo) ReorderMedia(ctx context.Context, projectID uuid.UUID,
 	return m.Called(ctx, projectID, mediaIDs).Error(0)
 }
 
+// fields builds ProjectFields with Russian texts only.
+func fields(title, description, category string) model.ProjectFields {
+	return model.ProjectFields{Title: title, Description: description, Category: category}
+}
+
 // ── Create validation ────────────────────────────────────────────────────────
 
 func TestCreate_EmptyTitle_ReturnsError(t *testing.T) {
 	svc := NewProjectService(&mockProjectRepo{})
-	_, err := svc.Create(context.Background(), "", "some description", "")
+	_, err := svc.Create(context.Background(), fields("", "some description", ""))
 	assert.Error(t, err)
 }
 
 func TestCreate_DescriptionTooLong_ReturnsError(t *testing.T) {
 	svc := NewProjectService(&mockProjectRepo{})
-	_, err := svc.Create(context.Background(), "Title", strings.Repeat("x", 501), "")
+	_, err := svc.Create(context.Background(), fields("Title", strings.Repeat("x", 501), ""))
 	assert.Error(t, err)
 }
 
@@ -96,9 +101,9 @@ func TestCreate_DescriptionExactly500Chars_Allowed(t *testing.T) {
 	ctx := context.Background()
 	desc := strings.Repeat("a", 500)
 
-	repo.On("Create", ctx, "Title", desc, "residential").Return(&model.Project{ID: uuid.New()}, nil)
+	repo.On("Create", ctx, fields("Title", desc, "residential")).Return(&model.Project{ID: uuid.New()}, nil)
 
-	_, err := svc.Create(ctx, "Title", desc, "")
+	_, err := svc.Create(ctx, fields("Title", desc, ""))
 	require.NoError(t, err)
 	repo.AssertExpectations(t)
 }
@@ -114,9 +119,9 @@ func TestCreate_ValidInput_CallsRepo(t *testing.T) {
 		Description: "Nice desc",
 		CreatedAt:   time.Now(),
 	}
-	repo.On("Create", ctx, "My project", "Nice desc", "commercial").Return(expected, nil)
+	repo.On("Create", ctx, fields("My project", "Nice desc", "commercial")).Return(expected, nil)
 
-	got, err := svc.Create(ctx, "My project", "Nice desc", "commercial")
+	got, err := svc.Create(ctx, fields("My project", "Nice desc", "commercial"))
 
 	require.NoError(t, err)
 	assert.Equal(t, expected, got)
@@ -127,13 +132,13 @@ func TestCreate_ValidInput_CallsRepo(t *testing.T) {
 
 func TestUpdate_EmptyTitle_ReturnsError(t *testing.T) {
 	svc := NewProjectService(&mockProjectRepo{})
-	_, err := svc.Update(context.Background(), uuid.New(), "", "desc", "", nil)
+	_, err := svc.Update(context.Background(), uuid.New(), fields("", "desc", ""), nil)
 	assert.Error(t, err)
 }
 
 func TestUpdate_DescriptionTooLong_ReturnsError(t *testing.T) {
 	svc := NewProjectService(&mockProjectRepo{})
-	_, err := svc.Update(context.Background(), uuid.New(), "Title", strings.Repeat("y", 501), "", nil)
+	_, err := svc.Update(context.Background(), uuid.New(), fields("Title", strings.Repeat("y", 501), ""), nil)
 	assert.Error(t, err)
 }
 
@@ -144,9 +149,9 @@ func TestUpdate_ValidInput_CallsRepo(t *testing.T) {
 	id := uuid.New()
 
 	expected := &model.Project{ID: id, Title: "Updated"}
-	repo.On("Update", ctx, id, "Updated", "desc", "commercial", (*uuid.UUID)(nil)).Return(expected, nil)
+	repo.On("Update", ctx, id, fields("Updated", "desc", "commercial"), (*uuid.UUID)(nil)).Return(expected, nil)
 
-	got, err := svc.Update(ctx, id, "Updated", "desc", "commercial", nil)
+	got, err := svc.Update(ctx, id, fields("Updated", "desc", "commercial"), nil)
 
 	require.NoError(t, err)
 	assert.Equal(t, expected, got)
@@ -159,16 +164,16 @@ func TestCreate_Cyrillic500Chars_Allowed(t *testing.T) {
 	ctx := context.Background()
 	desc := strings.Repeat("ж", 500) // 500 characters, 1000 bytes
 
-	repo.On("Create", ctx, "Title", desc, "residential").Return(&model.Project{ID: uuid.New()}, nil)
+	repo.On("Create", ctx, fields("Title", desc, "residential")).Return(&model.Project{ID: uuid.New()}, nil)
 
-	_, err := svc.Create(ctx, "Title", desc, "")
+	_, err := svc.Create(ctx, fields("Title", desc, ""))
 	require.NoError(t, err)
 	repo.AssertExpectations(t)
 }
 
 func TestCreate_Cyrillic501Chars_ReturnsError(t *testing.T) {
 	svc := NewProjectService(&mockProjectRepo{})
-	_, err := svc.Create(context.Background(), "Title", strings.Repeat("ж", 501), "")
+	_, err := svc.Create(context.Background(), fields("Title", strings.Repeat("ж", 501), ""))
 	assert.Error(t, err)
 }
 
@@ -176,13 +181,13 @@ func TestCreate_Cyrillic501Chars_ReturnsError(t *testing.T) {
 
 func TestCreate_UnknownCategory_ReturnsError(t *testing.T) {
 	svc := NewProjectService(&mockProjectRepo{})
-	_, err := svc.Create(context.Background(), "Title", "desc", "office")
+	_, err := svc.Create(context.Background(), fields("Title", "desc", "office"))
 	assert.Error(t, err)
 }
 
 func TestUpdate_UnknownCategory_ReturnsError(t *testing.T) {
 	svc := NewProjectService(&mockProjectRepo{})
-	_, err := svc.Update(context.Background(), uuid.New(), "Title", "desc", "Residential", nil)
+	_, err := svc.Update(context.Background(), uuid.New(), fields("Title", "desc", "Residential"), nil)
 	assert.Error(t, err, "categories are case-sensitive")
 }
 
@@ -192,9 +197,9 @@ func TestUpdate_EmptyCategory_DefaultsToResidential(t *testing.T) {
 	ctx := context.Background()
 	id := uuid.New()
 
-	repo.On("Update", ctx, id, "Title", "desc", "residential", (*uuid.UUID)(nil)).Return(&model.Project{ID: id}, nil)
+	repo.On("Update", ctx, id, fields("Title", "desc", "residential"), (*uuid.UUID)(nil)).Return(&model.Project{ID: id}, nil)
 
-	_, err := svc.Update(ctx, id, "Title", "desc", "", nil)
+	_, err := svc.Update(ctx, id, fields("Title", "desc", ""), nil)
 	require.NoError(t, err)
 	repo.AssertExpectations(t)
 }
@@ -321,4 +326,24 @@ func TestReorderProjects_InvalidInput_ReturnError(t *testing.T) {
 			repo.AssertNotCalled(t, "ReorderProjects", mock.Anything, mock.Anything, mock.Anything)
 		})
 	}
+}
+
+func TestCreate_EnglishTexts_PassedToRepo(t *testing.T) {
+	repo := &mockProjectRepo{}
+	svc := NewProjectService(repo)
+	ctx := context.Background()
+	in := model.ProjectFields{Title: "Дом", TitleEN: "House", Description: "Описание", DescriptionEN: "Description"}
+	want := in
+	want.Category = "residential"
+	repo.On("Create", ctx, want).Return(&model.Project{ID: uuid.New()}, nil)
+
+	_, err := svc.Create(ctx, in)
+	require.NoError(t, err)
+	repo.AssertExpectations(t)
+}
+
+func TestCreate_EnglishDescriptionTooLong_ReturnsError(t *testing.T) {
+	svc := NewProjectService(&mockProjectRepo{})
+	_, err := svc.Create(context.Background(), model.ProjectFields{Title: "Title", DescriptionEN: strings.Repeat("x", 501)})
+	assert.Error(t, err)
 }

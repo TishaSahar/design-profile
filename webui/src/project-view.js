@@ -1,7 +1,7 @@
 // Markup of a project on the public site: its card in the projects grid and
 // its case dialog. The site (main.js) and the admin preview (preview.js) both
 // use it, so the preview always matches what visitors see.
-import { t } from "./locales.js";
+import { t, getLang } from "./locales.js";
 
 export const CATEGORIES = ["residential", "commercial"];
 
@@ -46,10 +46,18 @@ export function projectPhotoUrls(p, mediaUrl) {
   return ordered.map((id) => mediaUrl(p.id, id));
 }
 
+// The project with its title and description in the current language.
+// An English text left empty in the admin panel falls back to the Russian one.
+export function localizeProject(p) {
+  if (getLang() !== "en") return p;
+  return { ...p, title: p.title_en || p.title, description: p.description_en || p.description };
+}
+
 // Card in the projects grid. `number` is the position shown on the card (1-based);
 // `photoUrls` are the project's photos, cover first — with several, the card pages
 // through them (see initCardGalleries).
 export function projectCardHTML(p, { number, photoUrls }) {
+  p = localizeProject(p);
   const href = `#/project/${p.id ?? "preview"}`;
   const many = photoUrls.length > 1;
   return `
@@ -228,11 +236,12 @@ export function initCardGalleries(root) {
 }
 
 // Case dialog: `meta` goes to the dialog bar, `body` to the dialog body.
-export function projectCaseHTML(p, { coverUrl, galleryUrls, photoCount }) {
+export function projectCaseHTML(p, { coverUrl, galleryUrls }) {
+  p = localizeProject(p);
   // The cover opens the gallery as an ordinary photo, followed by the rest in order.
   const photos = coverUrl ? [coverUrl, ...galleryUrls] : galleryUrls;
   return {
-    meta: `${t(`category_${categoryOf(p)}`)} • ${t("project_photos", photoCount)}`,
+    meta: t(`category_${categoryOf(p)}`),
     body: `
       <h3 class="dialog__title" id="case-title">${esc(p.title)}</h3>
       ${p.description ? `<p class="dialog__text">${esc(p.description)}</p>` : ""}

@@ -18,16 +18,28 @@ type OTPToken struct {
 
 // Project represents a designer's portfolio project.
 type Project struct {
-	ID           uuid.UUID  `json:"id"                     db:"id"`
-	Title        string     `json:"title"                  db:"title"`
-	Description  string     `json:"description"            db:"description"`
-	Category     string     `json:"category"               db:"category"`
-	CoverMediaID *uuid.UUID `json:"cover_media_id,omitempty" db:"cover_media_id"`
+	ID          uuid.UUID `json:"id"                     db:"id"`
+	Title       string    `json:"title"                  db:"title"`
+	Description string    `json:"description"            db:"description"`
+	// TitleEN and DescriptionEN are the English texts; empty when not translated.
+	TitleEN       string     `json:"title_en"               db:"title_en"`
+	DescriptionEN string     `json:"description_en"         db:"description_en"`
+	Category      string     `json:"category"               db:"category"`
+	CoverMediaID  *uuid.UUID `json:"cover_media_id,omitempty" db:"cover_media_id"`
 	// SortOrder is the position within the category on the public site (0 = first).
 	SortOrder int       `json:"sort_order"             db:"sort_order"`
 	CreatedAt time.Time `json:"created_at"             db:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"             db:"updated_at"`
 	Media     []Media   `json:"media,omitempty"        db:"-"`
+}
+
+// ProjectFields are the editable texts and category of a project.
+type ProjectFields struct {
+	Title         string
+	TitleEN       string
+	Description   string
+	DescriptionEN string
+	Category      string
 }
 
 // Media represents a binary media file attached to a project.

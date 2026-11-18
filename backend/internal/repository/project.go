@@ -10,11 +10,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-const projectColumns = `id, title, description, category, cover_media_id, sort_order, created_at, updated_at`
+const projectColumns = `id, title, description, title_en, description_en, category, cover_media_id, sort_order, created_at, updated_at`
 
 // projectScanTargets returns scan destinations matching projectColumns.
 func projectScanTargets(p *model.Project) []any {
-	return []any{&p.ID, &p.Title, &p.Description, &p.Category, &p.CoverMediaID, &p.SortOrder, &p.CreatedAt, &p.UpdatedAt}
+	return []any{&p.ID, &p.Title, &p.Description, &p.TitleEN, &p.DescriptionEN, &p.Category, &p.CoverMediaID, &p.SortOrder, &p.CreatedAt, &p.UpdatedAt}
 }
 
 type ProjectRepository struct {
@@ -109,13 +109,13 @@ func firstInCategory(param string) string {
 }
 
 // Create inserts a new project at the top of its category.
-func (r *ProjectRepository) Create(ctx context.Context, title, description, category string) (*model.Project, error) {
+func (r *ProjectRepository) Create(ctx context.Context, f model.ProjectFields) (*model.Project, error) {
 	p := &model.Project{}
 	err := r.db.QueryRow(ctx,
-		`INSERT INTO projects (title, description, category, sort_order)
-		 VALUES ($1, $2, $3::varchar, `+firstInCategory("$3")+`)
+		`INSERT INTO projects (title, description, category, title_en, description_en, sort_order)
+		 VALUES ($1, $2, $3::varchar, $4, $5, `+firstInCategory("$3")+`)
 		 RETURNING `+projectColumns,
-		title, description, category,
+		f.Title, f.Description, f.Category, f.TitleEN, f.DescriptionEN,
 	).Scan(projectScanTargets(p)...)
 	if err != nil {
 		return nil, fmt.Errorf("create project: %w", err)
@@ -123,17 +123,18 @@ func (r *ProjectRepository) Create(ctx context.Context, title, description, cate
 	return p, nil
 }
 
-// Update modifies a project's title, description, category and cover.
+// Update modifies a project's texts, category and cover.
 // A project moved to another category goes to the top of it.
-func (r *ProjectRepository) Update(ctx context.Context, id uuid.UUID, title, description, category string, coverMediaID *uuid.UUID) (*model.Project, error) {
+func (r *ProjectRepository) Update(ctx context.Context, id uuid.UUID, f model.ProjectFields, coverMediaID *uuid.UUID) (*model.Project, error) {
 	p := &model.Project{}
 	err := r.db.QueryRow(ctx,
 		`UPDATE projects SET title = $2, description = $3, category = $4::varchar, cover_media_id = $5,
+		        title_en = $6, description_en = $7,
 		        sort_order = CASE WHEN category = $4::varchar THEN sort_order ELSE `+firstInCategory("$4")+` END,
 		        updated_at = NOW()
 		 WHERE id = $1
 		 RETURNING `+projectColumns,
-		id, title, description, category, coverMediaID,
+		id, f.Title, f.Description, f.Category, coverMediaID, f.TitleEN, f.DescriptionEN,
 	).Scan(projectScanTargets(p)...)
 	if err != nil {
 		return nil, fmt.Errorf("update project: %w", err)

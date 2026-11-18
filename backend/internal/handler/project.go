@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"design-profile/backend/internal/model"
 	"design-profile/backend/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -86,9 +87,11 @@ func (h *ProjectHandler) ServeMedia(c *gin.Context) {
 }
 
 type createProjectBody struct {
-	Title       string `form:"title"       binding:"required"`
-	Description string `form:"description"`
-	Category    string `form:"category"`
+	Title         string `form:"title"          binding:"required"`
+	TitleEN       string `form:"title_en"`
+	Description   string `form:"description"`
+	DescriptionEN string `form:"description_en"`
+	Category      string `form:"category"`
 }
 
 // CreateProject godoc
@@ -98,8 +101,10 @@ type createProjectBody struct {
 // @Accept       multipart/form-data
 // @Produce      json
 // @Security     BearerAuth
-// @Param        title        formData  string  true   "Project title"
-// @Param        description  formData  string  false  "Project description (max 500 chars)"
+// @Param        title           formData  string  true   "Project title"
+// @Param        title_en        formData  string  false  "English title (empty: the Russian one is shown)"
+// @Param        description     formData  string  false  "Project description (max 500 chars)"
+// @Param        description_en  formData  string  false  "English description (max 500 chars; empty: the Russian one is shown)"
 // @Param        category     formData  string  false  "Work direction: residential (default) or commercial"
 // @Param        media        formData  file    false  "Media files (images), stored in the order sent"
 // @Param        cover_index  formData  int     false  "Index of the media file to use as the cover (0-based)"
@@ -113,7 +118,11 @@ func (h *ProjectHandler) CreateProject(c *gin.Context) {
 		return
 	}
 
-	project, err := h.svc.Create(c.Request.Context(), body.Title, body.Description, body.Category)
+	project, err := h.svc.Create(c.Request.Context(), model.ProjectFields{
+		Title: body.Title, TitleEN: body.TitleEN,
+		Description: body.Description, DescriptionEN: body.DescriptionEN,
+		Category: body.Category,
+	})
 	if err != nil {
 		badRequest(c, err.Error())
 		return
@@ -151,7 +160,12 @@ func (h *ProjectHandler) CreateProject(c *gin.Context) {
 			return
 		}
 		cover := mediaIDs[idx]
-		if _, err := h.svc.Update(c.Request.Context(), project.ID, project.Title, project.Description, project.Category, &cover); err != nil {
+		fields := model.ProjectFields{
+			Title: project.Title, TitleEN: project.TitleEN,
+			Description: project.Description, DescriptionEN: project.DescriptionEN,
+			Category: project.Category,
+		}
+		if _, err := h.svc.Update(c.Request.Context(), project.ID, fields, &cover); err != nil {
 			internalError(c, "failed to set the cover")
 			return
 		}
@@ -163,15 +177,17 @@ func (h *ProjectHandler) CreateProject(c *gin.Context) {
 }
 
 type updateProjectBody struct {
-	Title        string  `json:"title"          binding:"required"`
-	Description  string  `json:"description"`
-	Category     string  `json:"category"       example:"residential"`
-	CoverMediaID *string `json:"cover_media_id"`
+	Title         string  `json:"title"          binding:"required"`
+	TitleEN       string  `json:"title_en"`
+	Description   string  `json:"description"`
+	DescriptionEN string  `json:"description_en"`
+	Category      string  `json:"category"       example:"residential"`
+	CoverMediaID  *string `json:"cover_media_id"`
 }
 
 // UpdateProject godoc
 // @Summary      Update project (admin)
-// @Description  Updates a project's title, description, category (residential by default) and cover photo. All fields are replaced, so send the current cover_media_id to keep the cover.
+// @Description  Updates a project's title, description (Russian and English), category (residential by default) and cover photo. All fields are replaced, so send the current cover_media_id to keep the cover.
 // @Tags         admin
 // @Accept       json
 // @Produce      json
@@ -204,7 +220,11 @@ func (h *ProjectHandler) UpdateProject(c *gin.Context) {
 		coverMediaID = &parsed
 	}
 
-	project, err := h.svc.Update(c.Request.Context(), id, body.Title, body.Description, body.Category, coverMediaID)
+	project, err := h.svc.Update(c.Request.Context(), id, model.ProjectFields{
+		Title: body.Title, TitleEN: body.TitleEN,
+		Description: body.Description, DescriptionEN: body.DescriptionEN,
+		Category: body.Category,
+	}, coverMediaID)
 	if err != nil {
 		badRequest(c, err.Error())
 		return
