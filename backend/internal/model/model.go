@@ -53,6 +53,15 @@ type Media struct {
 	CreatedAt   time.Time `json:"created_at"   db:"created_at"`
 }
 
+// MediaFile is the content of a project photo in one of its sizes.
+type MediaFile struct {
+	Data        []byte
+	ContentType string
+	// Final is false while a requested web copy is not made yet and the
+	// original is served in its place: such a response must not be cached long.
+	Final bool
+}
+
 // ProjectRequest represents a client's project inquiry.
 type ProjectRequest struct {
 	ID        uuid.UUID `json:"id"         db:"id"`

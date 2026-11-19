@@ -63,11 +63,12 @@ func (h *ProjectHandler) GetProject(c *gin.Context) {
 
 // ServeMedia godoc
 // @Summary      Serve media file
-// @Description  Returns the binary content of a project media file.
+// @Description  Returns a project photo: the uploaded original, or with size=small / size=large a JPEG copy at most 800 / 1600 px wide (the original while the copy is not made yet). Photos never change, so they are cached for a year.
 // @Tags         projects
 // @Produce      application/octet-stream
 // @Param        id       path  string  true  "Project UUID"
 // @Param        mediaId  path  string  true  "Media UUID"
+// @Param        size     query string  false "small or large; empty for the original"
 // @Success      200
 // @Failure      400  {object}  map[string]string
 // @Failure      404  {object}  map[string]string
@@ -78,12 +79,24 @@ func (h *ProjectHandler) ServeMedia(c *gin.Context) {
 		badRequest(c, "invalid media id")
 		return
 	}
-	data, contentType, err := h.svc.GetMediaData(c.Request.Context(), mediaID)
+	size := c.Query("size")
+	if !service.ValidMediaSize(size) {
+		badRequest(c, "size must be small, large or empty")
+		return
+	}
+	file, err := h.svc.GetMediaData(c.Request.Context(), mediaID, size)
 	if err != nil {
 		notFound(c, "media not found")
 		return
 	}
-	c.Data(http.StatusOK, contentType, data)
+	// A photo's URL always names the same content: browsers may keep it for a year.
+	// An original standing in for a copy still being made is kept for a few minutes.
+	if file.Final {
+		c.Header("Cache-Control", "public, max-age=31536000, immutable")
+	} else {
+		c.Header("Cache-Control", "public, max-age=300")
+	}
+	c.Data(http.StatusOK, file.ContentType, file.Data)
 }
 
 type createProjectBody struct {

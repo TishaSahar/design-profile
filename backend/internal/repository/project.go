@@ -170,18 +170,57 @@ func (r *ProjectRepository) AddMedia(ctx context.Context, projectID uuid.UUID, d
 	return m, nil
 }
 
-// GetMediaData returns the binary data and content type for a media file.
-func (r *ProjectRepository) GetMediaData(ctx context.Context, mediaID uuid.UUID) ([]byte, string, error) {
-	var data []byte
-	var contentType string
+// GetMediaData returns a photo in the given size: "" for the original, "small" or
+// "large" for a web copy. Without that copy it returns the original.
+func (r *ProjectRepository) GetMediaData(ctx context.Context, mediaID uuid.UUID, size string) (*model.MediaFile, error) {
+	f := &model.MediaFile{}
+	var isCopy, copiesDone bool
 	err := r.db.QueryRow(ctx,
-		`SELECT data, content_type FROM project_media WHERE id = $1`,
-		mediaID,
-	).Scan(&data, &contentType)
+		`SELECT COALESCE(c.copy, data), c.copy IS NOT NULL, content_type, copies_done
+		 FROM project_media,
+		      LATERAL (SELECT CASE $2::text WHEN 'small' THEN small_data WHEN 'large' THEN large_data END AS copy) c
+		 WHERE id = $1`,
+		mediaID, size,
+	).Scan(&f.Data, &isCopy, &f.ContentType, &copiesDone)
 	if err != nil {
-		return nil, "", fmt.Errorf("get media data: %w", err)
+		return nil, fmt.Errorf("get media data: %w", err)
 	}
-	return data, contentType, nil
+	if isCopy {
+		f.ContentType = "image/jpeg"
+	}
+	f.Final = size == "" || isCopy || copiesDone
+	return f, nil
+}
+
+// SetMediaCopies stores the web copies of a photo; nil copies mean it has none
+// (the original is served), and the photo is not processed again.
+func (r *ProjectRepository) SetMediaCopies(ctx context.Context, mediaID uuid.UUID, small, large []byte) error {
+	_, err := r.db.Exec(ctx,
+		`UPDATE project_media SET small_data = $2, large_data = $3, copies_done = TRUE WHERE id = $1`,
+		mediaID, small, large,
+	)
+	if err != nil {
+		return fmt.Errorf("set media copies: %w", err)
+	}
+	return nil
+}
+
+// MediaWithoutCopies returns the photos whose web copies were not made yet, oldest first.
+func (r *ProjectRepository) MediaWithoutCopies(ctx context.Context) ([]uuid.UUID, error) {
+	rows, err := r.db.Query(ctx, `SELECT id FROM project_media WHERE NOT copies_done ORDER BY created_at`)
+	if err != nil {
+		return nil, fmt.Errorf("list media without copies: %w", err)
+	}
+	defer rows.Close()
+	var ids []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan media id: %w", err)
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
 }
 
 // ListMedia returns media metadata for a project (no binary data).

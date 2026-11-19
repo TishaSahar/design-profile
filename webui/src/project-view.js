@@ -21,9 +21,25 @@ export function esc(str) {
     .replace(/"/g, "&quot;");
 }
 
-export function photoHTML(src, alt, extraClass = "") {
+// How wide photos are laid out in the grids (cards, a project's gallery): one column
+// on phones, two up to 1023px, three above. The browser picks the copy to load by it.
+const GRID_SIZES = "(max-width: 539px) 100vw, (max-width: 1023px) 50vw, 33vw";
+
+// Source attributes of an <img>, with `prefix` "data-" for a photo loaded later.
+// Photos from the server come as web copies 800 and 1600 px wide (?size=small|large),
+// and the browser loads the one that suits the screen. Photos not uploaded yet
+// (blob: URLs in the admin preview) are shown as they are.
+function sourceAttrs(url, prefix = "") {
+  if (/^(blob|data):/.test(url)) return `${prefix}src="${url}"`;
+  const copy = (size) => `${url}${url.includes("?") ? "&" : "?"}size=${size}`;
+  return `${prefix}src="${copy("large")}" ${prefix}srcset="${copy("small")} 800w, ${copy("large")} 1600w" sizes="${GRID_SIZES}"`;
+}
+
+// `eager`: the photo is seen first, so it loads at once and ahead of the others.
+export function photoHTML(src, alt, extraClass = "", { eager = false } = {}) {
   if (!src) return `<div class="photo photo--empty ${extraClass}"></div>`;
-  return `<div class="photo ${extraClass}"><img src="${src}" alt="${esc(alt)}" loading="lazy"></div>`;
+  const loading = eager ? `loading="eager" fetchpriority="high"` : `loading="lazy"`;
+  return `<div class="photo ${extraClass}"><img ${sourceAttrs(src)} alt="${esc(alt)}" ${loading} decoding="async"></div>`;
 }
 
 // Photos that fail to load show the empty placeholder instead of a broken image.
@@ -68,7 +84,7 @@ export function projectCardHTML(p, { number, photoUrls }) {
             // Only the cover loads with the page; the other photos load when the card is near.
             ? photoUrls.map((url, i) => (i === 0
               ? photoHTML(url, p.title, "photo--zoom")
-              : `<div class="photo photo--zoom"><img data-src="${url}" alt="${esc(`${p.title} — ${i + 1}`)}"></div>`)).join("")
+              : `<div class="photo photo--zoom"><img ${sourceAttrs(url, "data-")} alt="${esc(`${p.title} — ${i + 1}`)}" decoding="async"></div>`)).join("")
             : photoHTML(null, p.title)}
         </a>
         ${many ? `
@@ -121,8 +137,10 @@ function loadSlide(g, i) {
   const img = slidesOf(g)[i]?.querySelector("img[data-src]");
   if (!img) return;
   img.addEventListener("error", () => img.closest(".photo")?.classList.add("photo--empty"), { once: true });
+  if (img.dataset.srcset) img.srcset = img.dataset.srcset;
   img.src = img.dataset.src;
   img.removeAttribute("data-src");
+  img.removeAttribute("data-srcset");
 }
 
 function goTo(g, i) {
@@ -247,7 +265,9 @@ export function projectCaseHTML(p, { coverUrl, galleryUrls }) {
       ${p.description ? `<p class="dialog__text">${esc(p.description)}</p>` : ""}
       ${photos.length ? `
         <div class="case__gallery">
-          ${photos.map((url, i) => photoHTML(url, i ? `${p.title} — ${i + 1}` : p.title)).join("")}
+          ${photos.map((url, i) => photoHTML(url, i ? `${p.title} — ${i + 1}` : p.title, "", {
+            eager: i < 3, // the first row is on screen as the project opens
+          })).join("")}
         </div>` : `<p class="muted">${t("case_no_photos")}</p>`}
       <div class="case__cta">
         <span>${t("case_cta_text")}</span>

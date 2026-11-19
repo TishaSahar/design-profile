@@ -111,6 +111,9 @@ func main() {
 		PhotoURL:  photoURL,
 	}, photoPath)
 
+	// Web copies of photos uploaded before they existed; the server starts meanwhile.
+	go projectSvc.MakeMissingCopies(context.Background())
+
 	authH := handler.NewAuthHandler(authSvc)
 	projectH := handler.NewProjectHandler(projectSvc)
 	requestH := handler.NewRequestHandler(requestSvc)

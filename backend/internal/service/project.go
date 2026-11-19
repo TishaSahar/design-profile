@@ -3,10 +3,12 @@ package service
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"mime"
 	"path/filepath"
 	"unicode/utf8"
 
+	"design-profile/backend/internal/imageproc"
 	"design-profile/backend/internal/model"
 
 	"github.com/google/uuid"
@@ -19,7 +21,9 @@ type projectRepo interface {
 	Update(ctx context.Context, id uuid.UUID, f model.ProjectFields, coverMediaID *uuid.UUID) (*model.Project, error)
 	Delete(ctx context.Context, id uuid.UUID) error
 	AddMedia(ctx context.Context, projectID uuid.UUID, data []byte, contentType, filename string, sortOrder int) (*model.Media, error)
-	GetMediaData(ctx context.Context, mediaID uuid.UUID) ([]byte, string, error)
+	GetMediaData(ctx context.Context, mediaID uuid.UUID, size string) (*model.MediaFile, error)
+	SetMediaCopies(ctx context.Context, mediaID uuid.UUID, small, large []byte) error
+	MediaWithoutCopies(ctx context.Context) ([]uuid.UUID, error)
 	DeleteMedia(ctx context.Context, mediaID uuid.UUID) error
 	ReorderMedia(ctx context.Context, projectID uuid.UUID, mediaIDs []uuid.UUID) error
 	ReorderProjects(ctx context.Context, category string, projectIDs []uuid.UUID) error
@@ -115,12 +119,74 @@ func (s *ProjectService) AddMedia(ctx context.Context, projectID uuid.UUID, data
 	if contentType == "" {
 		contentType = mime.TypeByExtension(filepath.Ext(filename))
 	}
-	return s.repo.AddMedia(ctx, projectID, data, contentType, filename, sortOrder)
+	m, err := s.repo.AddMedia(ctx, projectID, data, contentType, filename, sortOrder)
+	if err != nil {
+		return nil, err
+	}
+	// The photo is saved; without copies the site shows the original until the
+	// next startup makes them, so a failure here does not fail the upload.
+	s.makeCopies(ctx, m.ID, data)
+	return m, nil
 }
 
-// GetMediaData returns the raw bytes and content type for a media file.
-func (s *ProjectService) GetMediaData(ctx context.Context, mediaID uuid.UUID) ([]byte, string, error) {
-	return s.repo.GetMediaData(ctx, mediaID)
+// Photo sizes for GetMediaData: the uploaded original or one of its web copies.
+const (
+	MediaOriginal = ""
+	MediaSmall    = "small"
+	MediaLarge    = "large"
+)
+
+// ValidMediaSize reports whether size is one of the photo sizes above.
+func ValidMediaSize(size string) bool {
+	return size == MediaOriginal || size == MediaSmall || size == MediaLarge
+}
+
+// GetMediaData returns a photo in the given size (see MediaOriginal and the others).
+func (s *ProjectService) GetMediaData(ctx context.Context, mediaID uuid.UUID, size string) (*model.MediaFile, error) {
+	if !ValidMediaSize(size) {
+		return nil, fmt.Errorf("unknown photo size: %s", size)
+	}
+	return s.repo.GetMediaData(ctx, mediaID, size)
+}
+
+// makeCopies stores the web copies of a photo. A photo they cannot be made of
+// (GIF, SVG, a broken file) is marked as having none, so it is not retried.
+func (s *ProjectService) makeCopies(ctx context.Context, mediaID uuid.UUID, data []byte) {
+	small, large, err := imageproc.Copies(data)
+	if err != nil {
+		slog.Info("photo is served without web copies", "media_id", mediaID, "reason", err)
+		small, large = nil, nil
+	}
+	if err := s.repo.SetMediaCopies(ctx, mediaID, small, large); err != nil {
+		slog.Error("store photo copies", "media_id", mediaID, "err", err)
+	}
+}
+
+// MakeMissingCopies makes the web copies of photos uploaded before copies existed,
+// or whose copies failed to save. It runs once on startup, one photo at a time to
+// keep memory use low; the site serves the originals of photos still waiting.
+func (s *ProjectService) MakeMissingCopies(ctx context.Context) {
+	ids, err := s.repo.MediaWithoutCopies(ctx)
+	if err != nil {
+		slog.Error("find photos without web copies", "err", err)
+		return
+	}
+	if len(ids) == 0 {
+		return
+	}
+	slog.Info("making web copies of photos", "count", len(ids))
+	for _, id := range ids {
+		if ctx.Err() != nil {
+			return
+		}
+		f, err := s.repo.GetMediaData(ctx, id, MediaOriginal)
+		if err != nil {
+			slog.Error("read photo for web copies", "media_id", id, "err", err)
+			continue
+		}
+		s.makeCopies(ctx, id, f.Data)
+	}
+	slog.Info("web copies of photos are ready", "count", len(ids))
 }
 
 // ReorderProjects sets the order of one category's projects on the public site.

@@ -38,8 +38,9 @@ export const api = {
   projects: {
     list: () => request("GET", "/projects"),
     get: (id) => request("GET", `/projects/${id}`),
-    mediaUrl: (projectId, mediaId) =>
-      `${CONFIG.BASE_URL}/projects/${projectId}/media/${mediaId}`,
+    // size: "small" or "large" for a web copy (800 / 1600 px wide), omitted for the original.
+    mediaUrl: (projectId, mediaId, size) =>
+      `${CONFIG.BASE_URL}/projects/${projectId}/media/${mediaId}${size ? `?size=${size}` : ""}`,
 
     // Admin
     create: (formData) => request("POST", "/admin/projects", formData, true),
