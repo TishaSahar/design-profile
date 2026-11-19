@@ -1,7 +1,10 @@
 package service
 
 import (
+	"bytes"
 	"context"
+	"image"
+	"image/jpeg"
 	"strings"
 	"testing"
 	"time"
@@ -59,9 +62,21 @@ func (m *mockProjectRepo) AddMedia(ctx context.Context, projectID uuid.UUID, dat
 	return args.Get(0).(*model.Media), args.Error(1)
 }
 
-func (m *mockProjectRepo) GetMediaData(ctx context.Context, mediaID uuid.UUID) ([]byte, string, error) {
-	args := m.Called(ctx, mediaID)
-	return args.Get(0).([]byte), args.String(1), args.Error(2)
+func (m *mockProjectRepo) GetMediaData(ctx context.Context, mediaID uuid.UUID, size string) (*model.MediaFile, error) {
+	args := m.Called(ctx, mediaID, size)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.MediaFile), args.Error(1)
+}
+
+func (m *mockProjectRepo) SetMediaCopies(ctx context.Context, mediaID uuid.UUID, small, large []byte) error {
+	return m.Called(ctx, mediaID, small, large).Error(0)
+}
+
+func (m *mockProjectRepo) MediaWithoutCopies(ctx context.Context) ([]uuid.UUID, error) {
+	args := m.Called(ctx)
+	return args.Get(0).([]uuid.UUID), args.Error(1)
 }
 
 func (m *mockProjectRepo) DeleteMedia(ctx context.Context, mediaID uuid.UUID) error {
@@ -230,6 +245,8 @@ func TestAddMedia_AllowedTypes_PassValidation(t *testing.T) {
 		ct := ct
 		t.Run(ct, func(t *testing.T) {
 			repo.On("AddMedia", ctx, projectID, []byte("img"), ct, "file.jpg", 0).Return(fakeMedia, nil)
+			// Not a real image: the photo is kept, marked as having no web copies.
+			repo.On("SetMediaCopies", ctx, fakeMedia.ID, []byte(nil), []byte(nil)).Return(nil)
 
 			got, err := svc.AddMedia(ctx, projectID, []byte("img"), ct, "file.jpg", 0)
 			require.NoError(t, err)
@@ -345,5 +362,52 @@ func TestCreate_EnglishTexts_PassedToRepo(t *testing.T) {
 func TestCreate_EnglishDescriptionTooLong_ReturnsError(t *testing.T) {
 	svc := NewProjectService(&mockProjectRepo{})
 	_, err := svc.Create(context.Background(), model.ProjectFields{Title: "Title", DescriptionEN: strings.Repeat("x", 1001)})
+	assert.Error(t, err)
+}
+
+// ── Web copies ───────────────────────────────────────────────────────────────
+
+func testJPEG(t *testing.T, w, h int) []byte {
+	t.Helper()
+	img := image.NewRGBA(image.Rect(0, 0, w, h))
+	var buf bytes.Buffer
+	require.NoError(t, jpeg.Encode(&buf, img, nil))
+	return buf.Bytes()
+}
+
+func TestAddMedia_Photo_StoresWebCopies(t *testing.T) {
+	repo := &mockProjectRepo{}
+	svc := NewProjectService(repo)
+	ctx := context.Background()
+	projectID := uuid.New()
+	data := testJPEG(t, 2400, 1600)
+	media := &model.Media{ID: uuid.New()}
+	repo.On("AddMedia", ctx, projectID, data, "image/jpeg", "room.jpg", 0).Return(media, nil)
+	repo.On("SetMediaCopies", ctx, media.ID,
+		mock.MatchedBy(func(b []byte) bool { return len(b) > 0 }),
+		mock.MatchedBy(func(b []byte) bool { return len(b) > 0 }),
+	).Return(nil)
+
+	_, err := svc.AddMedia(ctx, projectID, data, "image/jpeg", "room.jpg", 0)
+	require.NoError(t, err)
+	repo.AssertExpectations(t)
+}
+
+func TestMakeMissingCopies_ProcessesWaitingPhotos(t *testing.T) {
+	repo := &mockProjectRepo{}
+	svc := NewProjectService(repo)
+	ctx := context.Background()
+	id := uuid.New()
+	repo.On("MediaWithoutCopies", ctx).Return([]uuid.UUID{id}, nil)
+	repo.On("GetMediaData", ctx, id, MediaOriginal).Return(&model.MediaFile{Data: testJPEG(t, 100, 80)}, nil)
+	repo.On("SetMediaCopies", ctx, id, mock.Anything, mock.Anything).Return(nil)
+
+	svc.MakeMissingCopies(ctx)
+	repo.AssertExpectations(t)
+}
+
+func TestGetMediaData_UnknownSize_ReturnsError(t *testing.T) {
+	svc := NewProjectService(&mockProjectRepo{})
+	_, err := svc.GetMediaData(context.Background(), uuid.New(), "huge")
 	assert.Error(t, err)
 }

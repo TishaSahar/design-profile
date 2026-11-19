@@ -811,7 +811,7 @@ const docTemplate = `{
         },
         "/projects/{id}/media/{mediaId}": {
             "get": {
-                "description": "Returns the binary content of a project media file.",
+                "description": "Returns a project photo: the uploaded original, or with size=small / size=large a JPEG copy at most 800 / 1600 px wide (the original while the copy is not made yet). Photos never change, so they are cached for a year.",
                 "produces": [
                     "application/octet-stream"
                 ],
@@ -833,6 +833,12 @@ const docTemplate = `{
                         "name": "mediaId",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "small or large; empty for the original",
+                        "name": "size",
+                        "in": "query"
                     }
                 ],
                 "responses": {

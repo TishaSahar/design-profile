@@ -632,7 +632,7 @@ function mountMediaManager(project) {
     <h4>Фотографии</h4>
     <div class="media-grid" id="media-grid">
       ${media.length ? media.map((m, i) => photoTile({
-        src: api.projects.mediaUrl(project.id, m.id), alt: m.filename, id: m.id,
+        src: api.projects.mediaUrl(project.id, m.id, "small"), alt: m.filename, id: m.id,
         index: i, total: media.length, isCover: m.id === project.cover_media_id,
       })).join("") : `<p class="empty">Фото пока нет.</p>`}
     </div>
