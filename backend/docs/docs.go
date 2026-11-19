@@ -69,13 +69,13 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Project description (max 500 chars)",
+                        "description": "Project description (max 1000 chars)",
                         "name": "description",
                         "in": "formData"
                     },
                     {
                         "type": "string",
-                        "description": "English description (max 500 chars; empty: the Russian one is shown)",
+                        "description": "English description (max 1000 chars; empty: the Russian one is shown)",
                         "name": "description_en",
                         "in": "formData"
                     },

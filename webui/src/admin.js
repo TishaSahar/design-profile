@@ -442,12 +442,12 @@ function openProjectEditor(project) {
             value="${esc(project?.title_en ?? "")}" aria-describedby="project-en-hint">
         </div>
         <div class="form__row">
-          <label class="form__label" for="project-description">Описание (до 500 символов)</label>
-          <textarea id="project-description" name="description" class="form__textarea" rows="3" maxlength="500">${esc(project?.description ?? "")}</textarea>
+          <label class="form__label" for="project-description">Описание (до 1000 символов)</label>
+          <textarea id="project-description" name="description" class="form__textarea" rows="3" maxlength="1000">${esc(project?.description ?? "")}</textarea>
         </div>
         <div class="form__row">
-          <label class="form__label" for="project-description-en">Описание на английском (до 500 символов)</label>
-          <textarea id="project-description-en" name="description_en" class="form__textarea" rows="3" maxlength="500"
+          <label class="form__label" for="project-description-en">Описание на английском (до 1000 символов)</label>
+          <textarea id="project-description-en" name="description_en" class="form__textarea" rows="3" maxlength="1000"
             lang="en" aria-describedby="project-en-hint">${esc(project?.description_en ?? "")}</textarea>
           <p class="form__hint" id="project-en-hint">Для английской версии сайта. Если оставить поле пустым, там будет показан русский текст.</p>
         </div>

@@ -103,8 +103,8 @@ type createProjectBody struct {
 // @Security     BearerAuth
 // @Param        title           formData  string  true   "Project title"
 // @Param        title_en        formData  string  false  "English title (empty: the Russian one is shown)"
-// @Param        description     formData  string  false  "Project description (max 500 chars)"
-// @Param        description_en  formData  string  false  "English description (max 500 chars; empty: the Russian one is shown)"
+// @Param        description     formData  string  false  "Project description (max 1000 chars)"
+// @Param        description_en  formData  string  false  "English description (max 1000 chars; empty: the Russian one is shown)"
 // @Param        category     formData  string  false  "Work direction: residential (default) or commercial"
 // @Param        media        formData  file    false  "Media files (images), stored in the order sent"
 // @Param        cover_index  formData  int     false  "Index of the media file to use as the cover (0-based)"

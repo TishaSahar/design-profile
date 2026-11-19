@@ -102,12 +102,12 @@ paths:
         in: formData
         name: title_en
         type: string
-      - description: Project description (max 500 chars)
+      - description: Project description (max 1000 chars)
         in: formData
         name: description
         type: string
-      - description: 'English description (max 500 chars; empty: the Russian one is
-          shown)'
+      - description: 'English description (max 1000 chars; empty: the Russian one
+          is shown)'
         in: formData
         name: description_en
         type: string
