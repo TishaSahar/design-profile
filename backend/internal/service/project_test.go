@@ -91,15 +91,15 @@ func TestCreate_EmptyTitle_ReturnsError(t *testing.T) {
 
 func TestCreate_DescriptionTooLong_ReturnsError(t *testing.T) {
 	svc := NewProjectService(&mockProjectRepo{})
-	_, err := svc.Create(context.Background(), fields("Title", strings.Repeat("x", 501), ""))
+	_, err := svc.Create(context.Background(), fields("Title", strings.Repeat("x", 1001), ""))
 	assert.Error(t, err)
 }
 
-func TestCreate_DescriptionExactly500Chars_Allowed(t *testing.T) {
+func TestCreate_DescriptionExactly1000Chars_Allowed(t *testing.T) {
 	repo := &mockProjectRepo{}
 	svc := NewProjectService(repo)
 	ctx := context.Background()
-	desc := strings.Repeat("a", 500)
+	desc := strings.Repeat("a", 1000)
 
 	repo.On("Create", ctx, fields("Title", desc, "residential")).Return(&model.Project{ID: uuid.New()}, nil)
 
@@ -138,7 +138,7 @@ func TestUpdate_EmptyTitle_ReturnsError(t *testing.T) {
 
 func TestUpdate_DescriptionTooLong_ReturnsError(t *testing.T) {
 	svc := NewProjectService(&mockProjectRepo{})
-	_, err := svc.Update(context.Background(), uuid.New(), fields("Title", strings.Repeat("y", 501), ""), nil)
+	_, err := svc.Update(context.Background(), uuid.New(), fields("Title", strings.Repeat("y", 1001), ""), nil)
 	assert.Error(t, err)
 }
 
@@ -158,11 +158,11 @@ func TestUpdate_ValidInput_CallsRepo(t *testing.T) {
 	repo.AssertExpectations(t)
 }
 
-func TestCreate_Cyrillic500Chars_Allowed(t *testing.T) {
+func TestCreate_Cyrillic1000Chars_Allowed(t *testing.T) {
 	repo := &mockProjectRepo{}
 	svc := NewProjectService(repo)
 	ctx := context.Background()
-	desc := strings.Repeat("ж", 500) // 500 characters, 1000 bytes
+	desc := strings.Repeat("ж", 1000) // 1000 characters, 2000 bytes
 
 	repo.On("Create", ctx, fields("Title", desc, "residential")).Return(&model.Project{ID: uuid.New()}, nil)
 
@@ -171,9 +171,9 @@ func TestCreate_Cyrillic500Chars_Allowed(t *testing.T) {
 	repo.AssertExpectations(t)
 }
 
-func TestCreate_Cyrillic501Chars_ReturnsError(t *testing.T) {
+func TestCreate_Cyrillic1001Chars_ReturnsError(t *testing.T) {
 	svc := NewProjectService(&mockProjectRepo{})
-	_, err := svc.Create(context.Background(), fields("Title", strings.Repeat("ж", 501), ""))
+	_, err := svc.Create(context.Background(), fields("Title", strings.Repeat("ж", 1001), ""))
 	assert.Error(t, err)
 }
 
@@ -344,6 +344,6 @@ func TestCreate_EnglishTexts_PassedToRepo(t *testing.T) {
 
 func TestCreate_EnglishDescriptionTooLong_ReturnsError(t *testing.T) {
 	svc := NewProjectService(&mockProjectRepo{})
-	_, err := svc.Create(context.Background(), model.ProjectFields{Title: "Title", DescriptionEN: strings.Repeat("x", 501)})
+	_, err := svc.Create(context.Background(), model.ProjectFields{Title: "Title", DescriptionEN: strings.Repeat("x", 1001)})
 	assert.Error(t, err)
 }

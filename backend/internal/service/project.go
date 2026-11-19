@@ -44,21 +44,24 @@ func normalizeCategory(category string) (string, error) {
 	}
 }
 
+// maxDescription is the length limit of a project description, in characters.
+const maxDescription = 1000
+
 // prepareProject validates the fields and defaults an empty category.
 func prepareProject(f model.ProjectFields) (model.ProjectFields, error) {
 	if f.Title == "" {
 		return f, fmt.Errorf("title is required")
 	}
 	// Characters, not bytes: Cyrillic letters take two bytes each, and the
-	// columns are VARCHAR(255) and VARCHAR(500) characters.
+	// columns are VARCHAR(255) and VARCHAR(1000) characters.
 	if utf8.RuneCountInString(f.TitleEN) > 255 {
 		return f, fmt.Errorf("English title must not exceed 255 characters")
 	}
-	if utf8.RuneCountInString(f.Description) > 500 {
-		return f, fmt.Errorf("description must not exceed 500 characters")
+	if utf8.RuneCountInString(f.Description) > maxDescription {
+		return f, fmt.Errorf("description must not exceed %d characters", maxDescription)
 	}
-	if utf8.RuneCountInString(f.DescriptionEN) > 500 {
-		return f, fmt.Errorf("English description must not exceed 500 characters")
+	if utf8.RuneCountInString(f.DescriptionEN) > maxDescription {
+		return f, fmt.Errorf("English description must not exceed %d characters", maxDescription)
 	}
 	category, err := normalizeCategory(f.Category)
 	if err != nil {
