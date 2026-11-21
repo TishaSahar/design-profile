@@ -11,6 +11,13 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+const otpColumns = `id, email, code, expires_at, used, created_at, attempts`
+
+// otpScanTargets returns scan destinations matching otpColumns.
+func otpScanTargets(t *model.OTPToken) []any {
+	return []any{&t.ID, &t.Email, &t.Code, &t.ExpiresAt, &t.Used, &t.CreatedAt, &t.Attempts}
+}
+
 type OTPRepository struct {
 	db *pgxpool.Pool
 }
@@ -33,30 +40,60 @@ func (r *OTPRepository) Create(ctx context.Context, email, code string, expiresA
 	token := &model.OTPToken{}
 	err = r.db.QueryRow(ctx,
 		`INSERT INTO otp_tokens (email, code, expires_at) VALUES ($1, $2, $3)
-		 RETURNING id, email, code, expires_at, used, created_at`,
+		 RETURNING `+otpColumns,
 		email, code, expiresAt,
-	).Scan(&token.ID, &token.Email, &token.Code, &token.ExpiresAt, &token.Used, &token.CreatedAt)
+	).Scan(otpScanTargets(token)...)
 	if err != nil {
 		return nil, fmt.Errorf("insert otp token: %w", err)
 	}
 	return token, nil
 }
 
-// FindActive returns the most recent active (unused, not expired) OTP for the given email and code.
-func (r *OTPRepository) FindActive(ctx context.Context, email, code string) (*model.OTPToken, error) {
+// ConsumeAttempt takes one check of the newest active code of an email: it
+// returns that code with its attempts counted, or pgx.ErrNoRows when there is no
+// active code or its maxAttempts are used up. Concurrent checks cannot exceed
+// maxAttempts: the row is re-checked under its lock.
+func (r *OTPRepository) ConsumeAttempt(ctx context.Context, email string, maxAttempts int) (*model.OTPToken, error) {
 	token := &model.OTPToken{}
 	err := r.db.QueryRow(ctx,
-		`SELECT id, email, code, expires_at, used, created_at
-		 FROM otp_tokens
-		 WHERE email = $1 AND code = $2 AND used = FALSE AND expires_at > NOW()
-		 ORDER BY created_at DESC
-		 LIMIT 1`,
-		email, code,
-	).Scan(&token.ID, &token.Email, &token.Code, &token.ExpiresAt, &token.Used, &token.CreatedAt)
+		`UPDATE otp_tokens SET attempts = attempts + 1
+		 WHERE id = (SELECT id FROM otp_tokens
+		             WHERE email = $1 AND used = FALSE AND expires_at > NOW()
+		             ORDER BY created_at DESC LIMIT 1)
+		   AND used = FALSE AND attempts < $2
+		 RETURNING `+otpColumns,
+		email, maxAttempts,
+	).Scan(otpScanTargets(token)...)
 	if err != nil {
-		return nil, fmt.Errorf("find active otp: %w", err)
+		return nil, fmt.Errorf("consume otp attempt: %w", err)
 	}
 	return token, nil
+}
+
+// AttemptsSince returns how many times the codes of an email were checked since a moment.
+func (r *OTPRepository) AttemptsSince(ctx context.Context, email string, since time.Time) (int, error) {
+	var n int
+	err := r.db.QueryRow(ctx,
+		`SELECT COALESCE(SUM(attempts), 0) FROM otp_tokens WHERE email = $1 AND created_at > $2`,
+		email, since,
+	).Scan(&n)
+	if err != nil {
+		return 0, fmt.Errorf("count otp attempts: %w", err)
+	}
+	return n, nil
+}
+
+// CreatedSince reports whether a code was issued to an email since a moment.
+func (r *OTPRepository) CreatedSince(ctx context.Context, email string, since time.Time) (bool, error) {
+	var exists bool
+	err := r.db.QueryRow(ctx,
+		`SELECT EXISTS (SELECT 1 FROM otp_tokens WHERE email = $1 AND created_at > $2)`,
+		email, since,
+	).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("check recent otp: %w", err)
+	}
+	return exists, nil
 }
 
 // MarkUsed marks the OTP token with the given ID as used.

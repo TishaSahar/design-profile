@@ -26,12 +26,22 @@ func (m *mockOTPStorer) Create(ctx context.Context, email, code string, expiresA
 	return args.Get(0).(*model.OTPToken), args.Error(1)
 }
 
-func (m *mockOTPStorer) FindActive(ctx context.Context, email, code string) (*model.OTPToken, error) {
-	args := m.Called(ctx, email, code)
+func (m *mockOTPStorer) ConsumeAttempt(ctx context.Context, email string, maxAttempts int) (*model.OTPToken, error) {
+	args := m.Called(ctx, email, maxAttempts)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*model.OTPToken), args.Error(1)
+}
+
+func (m *mockOTPStorer) AttemptsSince(ctx context.Context, email string, since time.Time) (int, error) {
+	args := m.Called(ctx, email, since)
+	return args.Int(0), args.Error(1)
+}
+
+func (m *mockOTPStorer) CreatedSince(ctx context.Context, email string, since time.Time) (bool, error) {
+	args := m.Called(ctx, email, since)
+	return args.Bool(0), args.Error(1)
 }
 
 func (m *mockOTPStorer) MarkUsed(ctx context.Context, id uuid.UUID) error {
@@ -56,6 +66,12 @@ const (
 	testJWTExpHours = 1
 )
 
+// allowLogin sets up a login that is neither locked nor within the resend interval.
+func allowLogin(otp *mockOTPStorer) {
+	otp.On("AttemptsSince", mock.Anything, testAdmin, mock.Anything).Return(0, nil)
+	otp.On("CreatedSince", mock.Anything, testAdmin, mock.Anything).Return(false, nil).Maybe() // only when a code is requested
+}
+
 func newAuthSvc(otp *mockOTPStorer, mail *mockEmailSender) *AuthService {
 	return NewAuthService(otp, mail, testAdmin, testJWTSecret, testJWTExpHours)
 }
@@ -78,6 +94,7 @@ func TestRequestOTP_CorrectEmail_CreatesOTPAndSendsEmail(t *testing.T) {
 	otp := &mockOTPStorer{}
 	mail := &mockEmailSender{}
 	svc := newAuthSvc(otp, mail)
+	allowLogin(otp)
 
 	fakeToken := &model.OTPToken{ID: uuid.New(), Email: testAdmin}
 	otp.On("Create", mock.Anything, testAdmin, mock.AnythingOfType("string"), mock.Anything).
@@ -96,6 +113,7 @@ func TestRequestOTP_SMTPError_ReturnedAsNil(t *testing.T) {
 	otp := &mockOTPStorer{}
 	mail := &mockEmailSender{}
 	svc := newAuthSvc(otp, mail)
+	allowLogin(otp)
 
 	fakeToken := &model.OTPToken{ID: uuid.New(), Email: testAdmin}
 	otp.On("Create", mock.Anything, testAdmin, mock.AnythingOfType("string"), mock.Anything).
@@ -114,6 +132,7 @@ func TestRequestOTP_StoreError_ReturnsError(t *testing.T) {
 	otp := &mockOTPStorer{}
 	mail := &mockEmailSender{}
 	svc := newAuthSvc(otp, mail)
+	allowLogin(otp)
 
 	otp.On("Create", mock.Anything, testAdmin, mock.AnythingOfType("string"), mock.Anything).
 		Return(nil, errors.New("db unavailable"))
@@ -134,7 +153,8 @@ func TestVerifyOTP_ValidCode_ReturnsJWT(t *testing.T) {
 	tokenID := uuid.New()
 	fakeToken := &model.OTPToken{ID: tokenID, Email: testAdmin, Code: "123456"}
 
-	otp.On("FindActive", mock.Anything, testAdmin, "123456").Return(fakeToken, nil)
+	allowLogin(otp)
+	otp.On("ConsumeAttempt", mock.Anything, testAdmin, otpMaxAttempts).Return(fakeToken, nil)
 	otp.On("MarkUsed", mock.Anything, tokenID).Return(nil)
 
 	jwt, err := svc.VerifyOTP(context.Background(), testAdmin, "123456")
@@ -149,7 +169,8 @@ func TestVerifyOTP_InvalidCode_ReturnsErrInvalidOTP(t *testing.T) {
 	mail := &mockEmailSender{}
 	svc := newAuthSvc(otp, mail)
 
-	otp.On("FindActive", mock.Anything, testAdmin, "000000").
+	allowLogin(otp)
+	otp.On("ConsumeAttempt", mock.Anything, testAdmin, otpMaxAttempts).
 		Return(nil, errors.New("not found"))
 
 	_, err := svc.VerifyOTP(context.Background(), testAdmin, "000000")
@@ -166,11 +187,72 @@ func TestVerifyOTP_MarkUsedFails_ReturnsError(t *testing.T) {
 	tokenID := uuid.New()
 	fakeToken := &model.OTPToken{ID: tokenID, Email: testAdmin, Code: "111111"}
 
-	otp.On("FindActive", mock.Anything, testAdmin, "111111").Return(fakeToken, nil)
+	allowLogin(otp)
+	otp.On("ConsumeAttempt", mock.Anything, testAdmin, otpMaxAttempts).Return(fakeToken, nil)
 	otp.On("MarkUsed", mock.Anything, tokenID).Return(errors.New("db error"))
 
 	_, err := svc.VerifyOTP(context.Background(), testAdmin, "111111")
 
 	require.Error(t, err)
 	assert.NotErrorIs(t, err, ErrInvalidOTP)
+}
+
+// ── Brute-force limits ───────────────────────────────────────────────────────
+
+func TestVerifyOTP_WrongCode_ReturnsErrInvalidOTP(t *testing.T) {
+	otp := &mockOTPStorer{}
+	svc := newAuthSvc(otp, &mockEmailSender{})
+	allowLogin(otp)
+	otp.On("ConsumeAttempt", mock.Anything, testAdmin, otpMaxAttempts).
+		Return(&model.OTPToken{ID: uuid.New(), Code: "123456", Attempts: 1}, nil)
+
+	_, err := svc.VerifyOTP(context.Background(), testAdmin, "654321")
+
+	require.ErrorIs(t, err, ErrInvalidOTP)
+	otp.AssertNotCalled(t, "MarkUsed")
+}
+
+func TestVerifyOTP_Locked_ReturnsErrTooManyAttempts(t *testing.T) {
+	otp := &mockOTPStorer{}
+	svc := newAuthSvc(otp, &mockEmailSender{})
+	otp.On("AttemptsSince", mock.Anything, testAdmin, mock.Anything).Return(otpWindowAttempts, nil)
+
+	_, err := svc.VerifyOTP(context.Background(), testAdmin, "123456")
+
+	require.ErrorIs(t, err, ErrTooManyAttempts)
+	otp.AssertNotCalled(t, "ConsumeAttempt")
+}
+
+func TestVerifyOTP_OtherEmail_RejectedWithoutDatabase(t *testing.T) {
+	otp := &mockOTPStorer{}
+	svc := newAuthSvc(otp, &mockEmailSender{})
+
+	_, err := svc.VerifyOTP(context.Background(), "attacker@evil.com", "123456")
+
+	require.ErrorIs(t, err, ErrInvalidOTP)
+	otp.AssertNotCalled(t, "AttemptsSince")
+	otp.AssertNotCalled(t, "ConsumeAttempt")
+}
+
+func TestRequestOTP_Locked_SendsNothing(t *testing.T) {
+	otp := &mockOTPStorer{}
+	mail := &mockEmailSender{}
+	svc := newAuthSvc(otp, mail)
+	otp.On("AttemptsSince", mock.Anything, testAdmin, mock.Anything).Return(otpWindowAttempts, nil)
+
+	require.NoError(t, svc.RequestOTP(context.Background(), testAdmin))
+	otp.AssertNotCalled(t, "Create")
+	mail.AssertNotCalled(t, "SendOTP")
+}
+
+func TestRequestOTP_WithinResendInterval_SendsNothing(t *testing.T) {
+	otp := &mockOTPStorer{}
+	mail := &mockEmailSender{}
+	svc := newAuthSvc(otp, mail)
+	otp.On("AttemptsSince", mock.Anything, testAdmin, mock.Anything).Return(0, nil)
+	otp.On("CreatedSince", mock.Anything, testAdmin, mock.Anything).Return(true, nil)
+
+	require.NoError(t, svc.RequestOTP(context.Background(), testAdmin))
+	otp.AssertNotCalled(t, "Create")
+	mail.AssertNotCalled(t, "SendOTP")
 }

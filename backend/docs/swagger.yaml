@@ -501,6 +501,12 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "429":
+          description: 'Too many attempts: login locked for up to an hour'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       summary: Verify OTP
       tags:
       - auth

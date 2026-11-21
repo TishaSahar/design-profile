@@ -14,6 +14,8 @@ type OTPToken struct {
 	ExpiresAt time.Time `db:"expires_at"`
 	Used      bool      `db:"used"`
 	CreatedAt time.Time `db:"created_at"`
+	// Attempts is how many times the code was checked, right or wrong.
+	Attempts int `db:"attempts"`
 }
 
 // Project represents a designer's portfolio project.
