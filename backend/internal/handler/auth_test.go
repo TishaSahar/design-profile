@@ -162,3 +162,17 @@ func TestVerifyOTPHandler_MissingCode_Returns400(t *testing.T) {
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
+
+func TestVerifyOTPHandler_TooManyAttempts_Returns429(t *testing.T) {
+	svc := &stubAuthSvc{verifyOTPErr: service.ErrTooManyAttempts}
+	r := newAuthTestRouter(NewAuthHandler(svc))
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/auth/verify-otp",
+		jsonBody(t, map[string]string{"email": "admin@example.com", "code": "000000"}))
+	req.Header.Set("Content-Type", "application/json")
+
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusTooManyRequests, w.Code)
+}

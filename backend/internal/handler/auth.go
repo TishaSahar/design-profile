@@ -65,6 +65,7 @@ func (h *AuthHandler) RequestOTP(c *gin.Context) {
 // @Success      200   {object}  map[string]string
 // @Failure      400   {object}  map[string]string
 // @Failure      401   {object}  map[string]string
+// @Failure      429   {object}  map[string]string  "Too many attempts: login locked for up to an hour"
 // @Router       /auth/verify-otp [post]
 func (h *AuthHandler) VerifyOTP(c *gin.Context) {
 	var body verifyOTPBody
@@ -75,6 +76,11 @@ func (h *AuthHandler) VerifyOTP(c *gin.Context) {
 
 	token, err := h.svc.VerifyOTP(c.Request.Context(), body.Email, body.Code)
 	if err != nil {
+		if errors.Is(err, service.ErrTooManyAttempts) {
+			slog.Warn("вход заблокирован: слишком много попыток", "ip", c.ClientIP())
+			c.JSON(http.StatusTooManyRequests, gin.H{"error": "too many attempts, try again in an hour"})
+			return
+		}
 		if errors.Is(err, service.ErrInvalidOTP) {
 			slog.Warn("неверный OTP при попытке входа",
 				"ip", c.ClientIP(),

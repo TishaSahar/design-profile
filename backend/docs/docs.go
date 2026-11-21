@@ -668,6 +668,15 @@ const docTemplate = `{
                                 "type": "string"
                             }
                         }
+                    },
+                    "429": {
+                        "description": "Too many attempts: login locked for up to an hour",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     }
                 }
             }

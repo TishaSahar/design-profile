@@ -85,7 +85,7 @@ function renderLogin() {
           </form>
         </div>
         <div id="login-step-otp" class="hidden">
-          <p class="login-card__hint">Код отправлен. Введите его ниже (действителен 10 минут).</p>
+          <p class="login-card__hint">Код отправлен. Введите его ниже: он действует 10 минут, на ввод — 5 попыток. Новый код можно запросить не чаще раза в минуту.</p>
           <form id="form-otp" class="form" novalidate>
             <div class="form__row">
               <input id="login-otp" type="text" name="code" class="form__input form__input--otp"
@@ -127,7 +127,9 @@ function renderLogin() {
       localStorage.setItem("admin_token", res.data.token);
       location.hash = "#/projects";
     } catch (err) {
-      errEl.textContent = "Неверный или просроченный код.";
+      errEl.textContent = err.status === 429
+        ? "Слишком много попыток входа. Вход временно заблокирован, попробуйте через час."
+        : "Неверный или просроченный код. Если попыток было 5, запросите новый код.";
       errEl.classList.remove("hidden");
     }
   });
