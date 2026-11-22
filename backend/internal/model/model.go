@@ -1,6 +1,7 @@
 package model
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -112,4 +113,52 @@ type Contacts struct {
 	Bio       string `json:"bio,omitempty"`
 	BioEn     string `json:"bio_en,omitempty"`
 	PhotoURL  string `json:"photo_url,omitempty"`
+}
+
+// Task types: what a background task does (see the tasks table).
+const (
+	// TaskNewOrderNotification emails the admins about a new project request;
+	// its body is a NewOrderNotification.
+	TaskNewOrderNotification = "new_order_notification"
+)
+
+// Task statuses. A task that succeeded is deleted, so there is no "done".
+const (
+	TaskStatusNew   = "new"   // waiting for its first run
+	TaskStatusError = "error" // failed for a temporary reason, retried at RunAt
+	TaskStatusFatal = "fatal" // cannot succeed; kept for a human to look at
+)
+
+// Task is a background task from the outbox table.
+type Task struct {
+	ID        uuid.UUID       `json:"id"`
+	Type      string          `json:"type"`
+	Status    string          `json:"status"`
+	Body      json.RawMessage `json:"body"`
+	Attempts  int             `json:"attempts"`
+	LastError string          `json:"last_error"`
+	RunAt     time.Time       `json:"run_at"`
+	CreatedAt time.Time       `json:"created_at"`
+	UpdatedAt time.Time       `json:"updated_at"`
+}
+
+// NewTask is a task to queue: its type and its body, encoded as JSON.
+type NewTask struct {
+	Type string
+	Body any
+}
+
+// NewOrderNotification is the body of a TaskNewOrderNotification: the request
+// as it was submitted, so the email does not depend on the request staying in the database.
+type NewOrderNotification struct {
+	RequestID        uuid.UUID `json:"request_id"`
+	FirstName        string    `json:"first_name"`
+	LastName         string    `json:"last_name"`
+	Email            string    `json:"email"`
+	Phone            string    `json:"phone,omitempty"`
+	Telegram         string    `json:"telegram,omitempty"`
+	PreferredContact string    `json:"preferred_contact"`
+	Description      string    `json:"description"`
+	Attachments      int       `json:"attachments"`
+	SubmittedAt      time.Time `json:"submitted_at"`
 }

@@ -1,5 +1,6 @@
 # Runtime / local config (contains secrets — never commit)
 backend/config/config.yaml
+backend/config/notifications.yaml
 
 # Claude Code metadata (settings, worktrees, launch configs)
 .claude/

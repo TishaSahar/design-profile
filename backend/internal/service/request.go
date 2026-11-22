@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/mail"
 	"strings"
+	"time"
 
 	"design-profile/backend/internal/model"
 
@@ -22,8 +23,7 @@ const (
 )
 
 type requestRepo interface {
-	Create(ctx context.Context, req *model.ProjectRequest) (*model.ProjectRequest, error)
-	AddAttachment(ctx context.Context, requestID uuid.UUID, data []byte, contentType, filename string) (*model.Attachment, error)
+	Create(ctx context.Context, req *model.ProjectRequest, attachments []model.Attachment, tasks []model.NewTask) (*model.ProjectRequest, error)
 	List(ctx context.Context) ([]model.ProjectRequest, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*model.ProjectRequest, error)
 	GetAttachmentData(ctx context.Context, attachmentID uuid.UUID) ([]byte, string, error)
@@ -31,10 +31,21 @@ type requestRepo interface {
 
 type RequestService struct {
 	repo requestRepo
+	// notify: whether a new request queues an email to the admins (they are
+	// set in notifications.yaml); onQueued wakes the task worker to send it now.
+	notify   bool
+	onQueued func()
 }
 
 func NewRequestService(repo requestRepo) *RequestService {
 	return &RequestService{repo: repo}
+}
+
+// NotifyAdmins makes every new request queue a TaskNewOrderNotification;
+// onQueued, if set, is called after such a request is saved.
+func (s *RequestService) NotifyAdmins(onQueued func()) {
+	s.notify = true
+	s.onQueued = onQueued
 }
 
 type CreateRequestInput struct {
@@ -74,7 +85,9 @@ func (s *RequestService) Create(ctx context.Context, input CreateRequestInput) (
 		return nil, err
 	}
 
-	req, err := s.repo.Create(ctx, &model.ProjectRequest{
+	// The ID is chosen here so the notification can name the request before it is saved.
+	request := &model.ProjectRequest{
+		ID:               uuid.New(),
 		FirstName:        input.FirstName,
 		LastName:         input.LastName,
 		Email:            input.Email,
@@ -83,19 +96,37 @@ func (s *RequestService) Create(ctx context.Context, input CreateRequestInput) (
 		PreferredContact: input.PreferredContact,
 		Description:      input.Description,
 		Consented:        input.Consented,
-	})
+	}
+	attachments := make([]model.Attachment, 0, len(input.Attachments))
+	for _, a := range input.Attachments {
+		attachments = append(attachments, model.Attachment{Data: a.Data, ContentType: a.ContentType, Filename: a.Filename})
+	}
+	var tasks []model.NewTask
+	if s.notify {
+		tasks = append(tasks, model.NewTask{
+			Type: model.TaskNewOrderNotification,
+			Body: model.NewOrderNotification{
+				RequestID:        request.ID,
+				FirstName:        request.FirstName,
+				LastName:         request.LastName,
+				Email:            request.Email,
+				Phone:            request.Phone,
+				Telegram:         request.Telegram,
+				PreferredContact: request.PreferredContact,
+				Description:      request.Description,
+				Attachments:      len(attachments),
+				SubmittedAt:      time.Now().UTC(),
+			},
+		})
+	}
+
+	req, err := s.repo.Create(ctx, request, attachments, tasks)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
-
-	for _, a := range input.Attachments {
-		att, err := s.repo.AddAttachment(ctx, req.ID, a.Data, a.ContentType, a.Filename)
-		if err != nil {
-			return nil, fmt.Errorf("save attachment: %w", err)
-		}
-		req.Attachments = append(req.Attachments, *att)
+	if len(tasks) > 0 && s.onQueued != nil {
+		s.onQueued()
 	}
-
 	return req, nil
 }
 

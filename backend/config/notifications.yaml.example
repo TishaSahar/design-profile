@@ -1,0 +1,15 @@
+# Email notifications. Copy this file to notifications.yaml next to config.yaml
+# (on the server: /opt/design-profile/shared/config/notifications.yaml) and restart
+# the backend. Without the file, or with no recipients, no emails are sent.
+#
+# The file holds personal email addresses, so it is not committed to git.
+# Emails go out through the SMTP account of config.yaml (email section).
+
+# Public address of the site: the email links to the request in the admin panel.
+site_url: https://example.com
+
+# Everyone here gets an email about each new project request from the site.
+new_order:
+  recipients:
+    - designer@example.com
+    # - assistant@example.com

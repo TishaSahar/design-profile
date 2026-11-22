@@ -1,10 +1,14 @@
 package service
 
 import (
+	"context"
 	"strings"
 	"testing"
 
+	"design-profile/backend/internal/model"
+
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestValidateAttachments(t *testing.T) {
@@ -96,4 +100,49 @@ func TestNormalizeContacts(t *testing.T) {
 		assert.Equal(t, "a@b.co", input.Email)
 		assert.Equal(t, "@olga", input.Telegram)
 	})
+}
+
+// ── Notifications ────────────────────────────────────────────────────────────
+
+type fakeRequestRepo struct {
+	requestRepo
+	tasks []model.NewTask
+}
+
+func (r *fakeRequestRepo) Create(_ context.Context, req *model.ProjectRequest, _ []model.Attachment, tasks []model.NewTask) (*model.ProjectRequest, error) {
+	r.tasks = tasks
+	return req, nil
+}
+
+func validRequest() CreateRequestInput {
+	return CreateRequestInput{
+		FirstName: "Анна", LastName: "Иванова", Email: "anna@example.com",
+		Description: "Квартира", Consented: true,
+		Attachments: []AttachmentInput{{Data: []byte("img"), ContentType: "image/jpeg", Filename: "a.jpg"}},
+	}
+}
+
+func TestCreateRequest_NotifyingAdmins_QueuesTaskInSameSave(t *testing.T) {
+	repo := &fakeRequestRepo{}
+	svc := NewRequestService(repo)
+	woken := 0
+	svc.NotifyAdmins(func() { woken++ })
+
+	req, err := svc.Create(context.Background(), validRequest())
+
+	require.NoError(t, err)
+	require.Len(t, repo.tasks, 1)
+	assert.Equal(t, model.TaskNewOrderNotification, repo.tasks[0].Type)
+	body := repo.tasks[0].Body.(model.NewOrderNotification)
+	assert.Equal(t, req.ID, body.RequestID)
+	assert.Equal(t, "anna@example.com", body.Email)
+	assert.Equal(t, 1, body.Attachments)
+	assert.Equal(t, 1, woken, "the worker is woken to send the email now")
+}
+
+func TestCreateRequest_NotificationsOff_QueuesNothing(t *testing.T) {
+	repo := &fakeRequestRepo{}
+	_, err := NewRequestService(repo).Create(context.Background(), validRequest())
+	require.NoError(t, err)
+	assert.Empty(t, repo.tasks)
 }
