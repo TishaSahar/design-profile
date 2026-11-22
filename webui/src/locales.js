@@ -181,31 +181,40 @@ export const LOCALES = {
     footer_copy: `© 2018–${YEAR} SAKHA DESIGN. Все права защищены.`,
 
     sample_kicker: "Пример результата услуги",
+    sample_sheet: "Лист",
     samples: {
       layout: {
         title: "Пример результата: Планировочное решение",
         text: "Вы получаете 3 принципиально разных варианта зонирования, проработку выбранного сценария (2 круга правок) и финальный монтажно-планировочный лист с габаритами мебели и проходов.",
-        bedroom: "Спальня 16.4 м²",
-        living: "Кухня-гостиная 34.2 м² (проход 1100 мм)",
-        sheet: "ЛИСТ 04 — ИТОГОВОЕ ПЛАНИРОВОЧНОЕ РЕШЕНИЕ С РАЗМЕРАМИ",
+        images: [
+          { src: "./assets/images/samples/layout-plan.jpg", caption: "План с расстановкой мебели" },
+          { src: "./assets/images/samples/layout-axonometry.jpg", caption: "Аксонометрия квартиры и помещений" },
+        ],
       },
       drawings: {
         title: "Пример результата: Альбом чертежей для ремонта",
         text: "Полный комплект рабочей документации (10–18 листов PDF в масштабе) для строительной бригады: электрика, освещение, сантехника, развёртки стен и ведомость отделки.",
-        sheets: [
-          ["Лист 01–02:", "Обмерный план, демонтаж и монтаж перегородок"],
-          ["Лист 03–05:", "Планы полов, потолков и привязка сантехники"],
-          ["Лист 06–09:", "Сценарии света, электрика и развёртки всех стен"],
+        images: [
+          { src: "./assets/images/samples/drawings-03.jpg", sheet: "03", caption: "Обмерный план" },
+          { src: "./assets/images/samples/drawings-04.jpg", sheet: "04", caption: "Планировочное решение" },
+          { src: "./assets/images/samples/drawings-05.jpg", sheet: "05", caption: "План демонтажа" },
+          { src: "./assets/images/samples/drawings-06.jpg", sheet: "06", caption: "План монтажа перегородок" },
+          { src: "./assets/images/samples/drawings-07.jpg", sheet: "07", caption: "Схема заполнения оконных и дверных проёмов" },
+          { src: "./assets/images/samples/drawings-08.jpg", sheet: "08", caption: "План полов" },
+          { src: "./assets/images/samples/drawings-09.jpg", sheet: "09", caption: "План потолков" },
+          { src: "./assets/images/samples/drawings-10.jpg", sheet: "10", caption: "План сантехнического оборудования" },
+          { src: "./assets/images/samples/drawings-11.jpg", sheet: "11", caption: "План осветительного оборудования" },
+          { src: "./assets/images/samples/drawings-12.jpg", sheet: "12", caption: "Схема управления освещением" },
+          { src: "./assets/images/samples/drawings-13.jpg", sheet: "13", caption: "Сводный план электрических цепей" },
         ],
       },
       concept: {
         title: "Пример результата: Дизайн-концепция и спецификация",
         text: "Коллажи, 3D-модель в SketchUp, AI-визуализации (2–3 ракурса на помещение) и таблица комплектации с реальными артикулами, ценами и ссылками на покупку в вашей стране.",
-        head: ["Наименование", "Артикул", "Ориентир цены", "Поставщик"],
-        rows: [
-          ["Обеденный стол из массива дуба 1800х900", "TB-OK-180", "€890", "Локальный шоурум / ссылка"],
-          ["Краска стен тёплый алебастр (матовая)", "NCS S 1002-Y", "€14 / л", "Колеровка по вееру"],
-          ["Подвесной светильник над столом", "LT-442-BR", "€310", "Официальный дилер"],
+        images: [
+          { src: "./assets/images/samples/concept-collage.webp", caption: "Коллаж: мебель, свет и материалы" },
+          { src: "./assets/images/samples/concept-3d-model.jpg", caption: "3D-модель в SketchUp" },
+          { src: "./assets/images/samples/concept-render.webp", caption: "Визуализация гостиной с кухней" },
         ],
       },
     },
@@ -390,31 +399,40 @@ export const LOCALES = {
     footer_copy: `© 2018–${YEAR} SAKHA DESIGN. All rights reserved.`,
 
     sample_kicker: "Service deliverable sample",
+    sample_sheet: "Sheet",
     samples: {
       layout: {
         title: "Sample deliverable: Space planning",
         text: "You receive 3 fundamentally different zoning options, development of the chosen scenario (2 rounds of revisions) and a final layout sheet with furniture and passage dimensions.",
-        bedroom: "Bedroom 16.4 m²",
-        living: "Kitchen-living room 34.2 m² (passage 1100 mm)",
-        sheet: "SHEET 04 — FINAL SPACE PLAN WITH DIMENSIONS",
+        images: [
+          { src: "./assets/images/samples/layout-plan.jpg", caption: "Floor plan with furniture layout" },
+          { src: "./assets/images/samples/layout-axonometry.jpg", caption: "Axonometric view of the apartment and rooms" },
+        ],
       },
       drawings: {
         title: "Sample deliverable: Renovation drawings album",
         text: "A complete set of working documentation (10–18 scaled PDF sheets) for the construction team: electrics, lighting, plumbing, wall elevations and a finishes schedule.",
-        sheets: [
-          ["Sheets 01–02:", "Measured plan, demolition and partition installation"],
-          ["Sheets 03–05:", "Floor and ceiling plans, plumbing positions"],
-          ["Sheets 06–09:", "Lighting scenarios, electrics and all wall elevations"],
+        images: [
+          { src: "./assets/images/samples/drawings-03.jpg", sheet: "03", caption: "Measured plan" },
+          { src: "./assets/images/samples/drawings-04.jpg", sheet: "04", caption: "Space plan" },
+          { src: "./assets/images/samples/drawings-05.jpg", sheet: "05", caption: "Demolition plan" },
+          { src: "./assets/images/samples/drawings-06.jpg", sheet: "06", caption: "Partition installation plan" },
+          { src: "./assets/images/samples/drawings-07.jpg", sheet: "07", caption: "Window and door openings" },
+          { src: "./assets/images/samples/drawings-08.jpg", sheet: "08", caption: "Floor finishes plan" },
+          { src: "./assets/images/samples/drawings-09.jpg", sheet: "09", caption: "Ceiling plan" },
+          { src: "./assets/images/samples/drawings-10.jpg", sheet: "10", caption: "Plumbing fixtures plan" },
+          { src: "./assets/images/samples/drawings-11.jpg", sheet: "11", caption: "Lighting fixtures plan" },
+          { src: "./assets/images/samples/drawings-12.jpg", sheet: "12", caption: "Lighting control plan" },
+          { src: "./assets/images/samples/drawings-13.jpg", sheet: "13", caption: "Combined electrical plan" },
         ],
       },
       concept: {
         title: "Sample deliverable: Design concept and specification",
         text: "Collages, a SketchUp 3D model, AI renderings (2–3 views per room) and a furnishing schedule with real product codes, prices and purchase links in your country.",
-        head: ["Item", "Product code", "Approx. price", "Supplier"],
-        rows: [
-          ["Solid oak dining table 1800×900", "TB-OK-180", "€890", "Local showroom / link"],
-          ["Warm alabaster wall paint (matt)", "NCS S 1002-Y", "€14 / l", "Tinted from the fan deck"],
-          ["Pendant light above the table", "LT-442-BR", "€310", "Official dealer"],
+        images: [
+          { src: "./assets/images/samples/concept-collage.webp", caption: "Collage: furniture, lighting and materials" },
+          { src: "./assets/images/samples/concept-3d-model.jpg", caption: "SketchUp 3D model" },
+          { src: "./assets/images/samples/concept-render.webp", caption: "Rendering of the living room and kitchen" },
         ],
       },
     },

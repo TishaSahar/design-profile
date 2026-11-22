@@ -318,36 +318,83 @@ function openSample(type) {
   showDialog("sample-modal");
 }
 
+// Every sample is a set of images: drawings, collages, renders (see `samples` in locales.js).
 function renderSample(type) {
   const s = t("samples")[type];
-  let body = "";
-  if (type === "layout") {
-    body = `
-      <svg viewBox="0 0 640 300" class="sample-plan" role="img" aria-label="${s.sheet}">
-        <rect x="30" y="25" width="580" height="250" fill="none" stroke="#1E1C1A" stroke-width="4"/>
-        <line x1="250" y1="25" x2="250" y2="180" stroke="#1E1C1A" stroke-width="2.5"/>
-        <line x1="250" y1="225" x2="250" y2="275" stroke="#1E1C1A" stroke-width="2.5"/>
-        <rect x="55" y="50" width="140" height="45" fill="#E4E0D8" stroke="#1E1C1A"/>
-        <rect x="290" y="50" width="290" height="85" fill="#77785E" fill-opacity="0.2" stroke="#1E1C1A"/>
-        <text x="125" y="77" font-size="11" fill="#1E1C1A" text-anchor="middle">${s.bedroom}</text>
-        <text x="435" y="96" font-size="11" fill="#1E1C1A" text-anchor="middle">${s.living}</text>
-        <text x="320" y="245" font-size="10" fill="#754044" text-anchor="middle" font-family="monospace">${s.sheet}</text>
-      </svg>`;
-  } else if (type === "drawings") {
-    body = `<div class="sample-sheets">${s.sheets.map(([sheet, text]) => `<div><strong>${sheet}</strong> ${text}</div>`).join("")}</div>`;
-  } else {
-    body = `
-      <div class="sample-table-wrap">
-        <table class="sample-table">
-          <thead><tr>${s.head.map((h) => `<th>${h}</th>`).join("")}</tr></thead>
-          <tbody>${s.rows.map((row) => `<tr>${row.map((cell) => `<td>${cell}</td>`).join("")}</tr>`).join("")}</tbody>
-        </table>
-      </div>`;
-  }
   $("sample-body").innerHTML = `
     <h3 class="dialog__title" id="sample-title">${s.title}</h3>
     <p class="dialog__text">${s.text}</p>
-    ${body}`;
+    ${sampleGalleryHTML(s.images)}`;
+  initSampleGallery($("sample-body"));
+}
+
+// Images of a sample shown one at a time: swiped on touch screens, paged with the
+// arrows, the dots or the arrow keys. An image is shown whole, never cropped, and
+// opens full size in a new tab (to read the small print of drawings). `sheet` is the number of the
+// drawing in its album; without it the drawings are numbered in order.
+function sampleGalleryHTML(images) {
+  return `
+    <div class="sample-gallery">
+      <div class="sample-gallery__track" tabindex="0" role="group" aria-roledescription="carousel">
+        ${images.map((img, i) => `
+          <figure class="sample-gallery__slide" aria-label="${t("card_photo", i + 1, images.length)}">
+            <a href="${img.src}" target="_blank" rel="noopener" class="sample-gallery__open" tabindex="-1">
+              <img src="${img.src}" alt="${img.caption}" loading="${i ? "lazy" : "eager"}" decoding="async">
+            </a>
+            <figcaption>${img.sheet ? `${t("sample_sheet")} ${img.sheet}` : pad(i + 1)} — ${img.caption}</figcaption>
+          </figure>`).join("")}
+      </div>
+      ${images.length > 1 ? `
+        <button type="button" class="sample-gallery__nav sample-gallery__nav--prev" data-step="-1" aria-label="${t("card_prev")}">‹</button>
+        <button type="button" class="sample-gallery__nav sample-gallery__nav--next" data-step="1" aria-label="${t("card_next")}">›</button>
+        <div class="sample-gallery__dots">
+          ${images.map((img, i) => `<button type="button" class="sample-gallery__dot" data-index="${i}" aria-label="${img.caption}"></button>`).join("")}
+        </div>` : ""}
+    </div>`;
+}
+
+function initSampleGallery(root) {
+  const g = root.querySelector(".sample-gallery");
+  if (!g) return;
+  const track = g.querySelector(".sample-gallery__track");
+  const count = track.children.length;
+  // The image shown, or being slid to: quick clicks during a slide count from its target.
+  let index = 0;
+  const show = (i) => {
+    index = Math.max(0, Math.min(count - 1, i));
+    const smooth = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+    track.scrollTo({ left: index * track.clientWidth, behavior: smooth ? "smooth" : "auto" });
+    sync();
+  };
+  const sync = () => {
+    const i = index;
+    g.querySelectorAll(".sample-gallery__dot").forEach((d, k) => d.setAttribute("aria-current", String(k === i)));
+    g.querySelectorAll("[data-step]").forEach((b) => {
+      b.disabled = Number(b.dataset.step) < 0 ? i === 0 : i === count - 1;
+    });
+  };
+  let settle;
+  // A swipe ends where the visitor left it.
+  track.addEventListener("scroll", () => {
+    clearTimeout(settle);
+    settle = setTimeout(() => {
+      index = Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
+      sync();
+    }, 120);
+  });
+  g.addEventListener("click", (e) => {
+    const step = e.target.closest("[data-step]");
+    const dot = e.target.closest("[data-index]");
+    if (step) show(index + Number(step.dataset.step));
+    else if (dot) show(Number(dot.dataset.index));
+  });
+  track.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+      e.preventDefault();
+      show(index + (e.key === "ArrowLeft" ? -1 : 1));
+    }
+  });
+  sync();
 }
 
 // ── Dialogs ──────────────────────────────────────────────────────────────────
