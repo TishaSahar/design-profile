@@ -679,15 +679,43 @@ input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; background: v
 .case__gallery .photo img { height: auto; }
 .case__cta { padding-top: 1.5rem; border-top: 1px solid var(--hairline); display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; font-size: 13px; color: var(--muted); }
 
-.sample-plan { width: 100%; height: auto; background: var(--cream); border: 1px solid var(--hairline); }
-.sample-sheets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; font-size: 13px; }
-.sample-sheets div { padding: 1rem; background: var(--cream); border: 1px solid var(--hairline); }
-.sample-table-wrap { overflow-x: auto; padding: 1rem; background: var(--cream); border: 1px solid var(--hairline); }
-.sample-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
-.sample-table th { padding: .5rem .75rem .5rem 0; font-weight: 400; font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--olive-text); border-bottom: 1px solid var(--hairline); }
-.sample-table td { padding: .65rem .75rem .65rem 0; border-bottom: 1px solid var(--hairline); }
-.sample-table tr:last-child td { border-bottom: none; }
-.sample-table td:nth-child(2) { font-family: ui-monospace, monospace; color: var(--burgundy); }
+.sample-gallery { position: relative; min-width: 0; max-width: 100%; background: #fff; border: 1px solid var(--hairline); } /* never wider than the dialog, whatever the drawings size */
+.sample-gallery__track {
+  display: flex; overflow-x: auto; scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain; scrollbar-width: none;
+}
+.sample-gallery__track::-webkit-scrollbar { display: none; }
+.sample-gallery__track:focus-visible { outline: 2px solid var(--burgundy); outline-offset: -2px; }
+.sample-gallery__slide {
+  flex: 0 0 100%; margin: 0; padding: 1.25rem 1.25rem 3rem;
+  display: flex; flex-direction: column; align-items: center; gap: .75rem;
+  scroll-snap-align: start; scroll-snap-stop: always;
+}
+/* The whole sheet stays visible: as wide as the dialog, at most 65% of the screen high. */
+.sample-gallery__open { display: flex; justify-content: center; width: 100%; cursor: zoom-in; }
+.sample-gallery__slide img { width: auto; max-width: 100%; height: auto; max-height: min(65vh, 36rem); }
+.sample-gallery__slide figcaption {
+  font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--olive-text); text-align: center;
+}
+.sample-gallery__nav {
+  position: absolute; top: 50%; z-index: 1;
+  width: 2.5rem; height: 2.5rem; margin-top: -1.25rem; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--paper); color: var(--charcoal); border: 1px solid var(--hairline);
+  font-family: var(--serif); font-size: 1.75rem; line-height: 1;
+  transition: opacity .2s, background .2s;
+}
+.sample-gallery__nav--prev { left: .75rem; }
+.sample-gallery__nav--next { right: .75rem; }
+.sample-gallery__nav:hover { background: var(--cream); }
+.sample-gallery__nav:disabled { opacity: 0; pointer-events: none; }
+.sample-gallery__dots { position: absolute; left: 0; right: 0; bottom: .6rem; display: flex; justify-content: center; gap: .25rem; }
+.sample-gallery__dot { width: 1.5rem; height: 1.5rem; display: grid; place-items: center; }
+.sample-gallery__dot::before {
+  content: ""; width: .4rem; height: .4rem; border-radius: 50%;
+  background: var(--hairline); transition: background .3s, transform .3s;
+}
+.sample-gallery__dot[aria-current="true"]::before { background: var(--charcoal); transform: scale(1.25); }
 
 /* ── States ───────────────────────────────────────────────────────────────── */
 .loader { width: 32px; height: 32px; margin: 3rem auto; border: 1px solid var(--hairline); border-top-color: var(--charcoal); border-radius: 50%; animation: spin .8s linear infinite; }
@@ -734,7 +762,6 @@ input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; background: v
   .direction__vertical { display: none; }
   .direction__bottom { flex-direction: column; align-items: flex-start; }
   .case__gallery { grid-template-columns: minmax(0, 1fr); }
-  .sample-sheets { grid-template-columns: 1fr; }
   .service-card__actions { flex-direction: column; }
 }
 /* Phones: one card per row, but a shorter photo (4:5, at most ~60% of the screen),
