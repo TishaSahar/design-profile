@@ -26,6 +26,7 @@ import (
 	"design-profile/backend/internal/model"
 	"design-profile/backend/internal/repository"
 	"design-profile/backend/internal/service"
+	"design-profile/backend/internal/tasks"
 	"design-profile/backend/migrations"
 
 	"github.com/gin-gonic/gin"
@@ -113,6 +114,30 @@ func main() {
 
 	// Web copies of photos uploaded before they existed; the server starts meanwhile.
 	go projectSvc.MakeMissingCopies(context.Background())
+
+	// Background tasks (outbox): for now, emails to the admins about new requests,
+	// sent to the addresses in notifications.yaml next to the main config.
+	notifications, err := config.LoadNotifications(filepath.Join(filepath.Dir(*cfgPath), "notifications.yaml"))
+	if err != nil {
+		log.Fatalf("load notifications: %v", err)
+	}
+	var recipients []string
+	siteURL := ""
+	if notifications != nil {
+		recipients = notifications.NewOrder.Recipients
+		siteURL = notifications.SiteURL
+	}
+	taskWorker := tasks.NewWorker(repository.NewTaskRepository(pool))
+	// Registered even without recipients: notifications queued earlier then fail
+	// as fatal with a clear reason instead of waiting forever.
+	taskWorker.Handle(model.TaskNewOrderNotification, tasks.NewOrderNotification(emailClient, recipients, siteURL))
+	if len(recipients) > 0 {
+		requestSvc.NotifyAdmins(taskWorker.Wake)
+		slog.Info("new request notifications are on", "recipients", len(recipients))
+	} else {
+		slog.Warn("new request notifications are off: no new_order.recipients in notifications.yaml")
+	}
+	go taskWorker.Run(context.Background())
 
 	authH := handler.NewAuthHandler(authSvc)
 	projectH := handler.NewProjectHandler(projectSvc)
