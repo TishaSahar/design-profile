@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -45,4 +46,18 @@ func TestNotificationsExample_IsValid(t *testing.T) {
 	n, err := LoadNotifications("notifications.yaml.example")
 	require.NoError(t, err)
 	assert.NotEmpty(t, n.NewOrder.Recipients)
+	require.NotNil(t, n.Outbox.ErrorDelay)
+	assert.Equal(t, time.Minute, *n.Outbox.ErrorDelay)
+}
+
+// The outbox section itself is tested with tasks.Config; here, that it is read and checked.
+func TestLoadNotifications_Outbox(t *testing.T) {
+	n, err := LoadNotifications(writeNotifications(t, "outbox:\n  delay: 0s\n  error_delay: 2m\n"))
+	require.NoError(t, err)
+	assert.Equal(t, 2*time.Minute, n.Outbox.Settings().ErrorDelay)
+
+	for _, text := range []string{"outbox:\n  error_delay: 100ms\n", "outbox:\n  delay: soon\n"} {
+		_, err := LoadNotifications(writeNotifications(t, text))
+		assert.Error(t, err, text)
+	}
 }

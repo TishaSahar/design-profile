@@ -1,7 +1,7 @@
 // Package tasks runs the background tasks of the outbox table: it picks up due
-// tasks, hands each to the handler of its type and records the outcome —
-// deleted on success, retried later on a temporary failure (status error),
-// given up on a permanent one (status fatal).
+// tasks one at a time, hands each to the handler of its type and records the
+// outcome — deleted on success, retried after Settings.ErrorDelay on a temporary
+// failure (status error), given up on a permanent one (status fatal).
 package tasks
 
 import (
@@ -36,29 +36,32 @@ type store interface {
 	MarkFatal(ctx context.Context, id uuid.UUID, reason string) error
 }
 
+// lease: a claimed task is not taken again for this long, so if the backend stops
+// mid-task the task still runs later — possibly twice, never zero times.
+const lease = 5 * time.Minute
+
+// outcome is what happened in one step of the worker; it decides the pause after it.
+type outcome int
+
 const (
-	// pollInterval: how often due tasks are looked for when nothing wakes the worker.
-	pollInterval = 15 * time.Second
-	batchSize    = 10
-	// lease: a claimed task is not taken again for this long, so if the backend
-	// stops mid-task the task still runs later — possibly twice, never zero times.
-	lease = 5 * time.Minute
-	// Retries wait 1, 2, 4… minutes after a failure, at most an hour.
-	firstRetry = time.Minute
-	maxRetry   = time.Hour
+	noTasks outcome = iota
+	done            // succeeded, or failed for good (fatal)
+	failed          // failed for a temporary reason, or the table could not be read
 )
 
 // Worker runs due tasks until its context is cancelled.
 type Worker struct {
 	store    store
+	settings Settings
 	handlers map[string]Handler
 	wake     chan struct{}
 	now      func() time.Time
 }
 
-func NewWorker(store store) *Worker {
+func NewWorker(store store, settings Settings) *Worker {
 	return &Worker{
 		store:    store,
+		settings: settings,
 		handlers: map[string]Handler{},
 		wake:     make(chan struct{}, 1),
 		now:      time.Now,
@@ -77,39 +80,48 @@ func (w *Worker) Wake() {
 	}
 }
 
-// Run processes due tasks until ctx is cancelled.
+// Run processes due tasks one at a time until ctx is cancelled, pausing after
+// each step as its outcome and the Settings say.
 func (w *Worker) Run(ctx context.Context) {
-	ticker := time.NewTicker(pollInterval)
-	defer ticker.Stop()
-	for {
-		w.RunDue(ctx)
+	for ctx.Err() == nil {
+		pause := w.pause(w.Step(ctx))
+		timer := time.NewTimer(pause)
 		select {
 		case <-ctx.Done():
+			timer.Stop()
 			return
-		case <-ticker.C:
+		case <-timer.C:
 		case <-w.wake:
+			timer.Stop()
 		}
 	}
 }
 
-// RunDue processes the tasks due now, batch after batch, until none is left.
-func (w *Worker) RunDue(ctx context.Context) {
-	for ctx.Err() == nil {
-		batch, err := w.store.Claim(ctx, batchSize, lease)
-		if err != nil {
-			slog.Error("claim tasks", "err", err)
-			return
-		}
-		for _, t := range batch {
-			w.run(ctx, t)
-		}
-		if len(batch) < batchSize {
-			return
-		}
+func (w *Worker) pause(o outcome) time.Duration {
+	switch o {
+	case noTasks:
+		return w.settings.NoTasksDelay
+	case failed:
+		return w.settings.ErrorDelay
+	default:
+		return w.settings.Delay
 	}
 }
 
-func (w *Worker) run(ctx context.Context, t model.Task) {
+// Step runs the next due task, if any.
+func (w *Worker) Step(ctx context.Context) outcome {
+	batch, err := w.store.Claim(ctx, 1, lease)
+	if err != nil {
+		slog.Error("claim tasks", "err", err)
+		return failed
+	}
+	if len(batch) == 0 {
+		return noTasks
+	}
+	return w.run(ctx, batch[0])
+}
+
+func (w *Worker) run(ctx context.Context, t model.Task) outcome {
 	log := slog.With("task_id", t.ID, "type", t.Type, "attempt", t.Attempts)
 	h, ok := w.handlers[t.Type]
 	var err error
@@ -125,28 +137,22 @@ func (w *Worker) run(ctx context.Context, t model.Task) {
 		if err := w.store.Delete(ctx, t.ID); err != nil {
 			// The task ran; it runs again once its lease is over.
 			log.Error("delete finished task", "err", err)
-			return
+			return failed
 		}
 		log.Info("task done")
+		return done
 	case errors.As(err, &permanent):
 		log.Error("task failed for good", "err", err)
 		if err := w.store.MarkFatal(ctx, t.ID, err.Error()); err != nil {
 			log.Error("mark task fatal", "err", err)
 		}
+		return done
 	default:
-		next := w.now().Add(retryDelay(t.Attempts))
+		next := w.now().Add(w.settings.ErrorDelay)
 		log.Warn("task failed, will retry", "err", err, "retry_at", next)
 		if err := w.store.MarkError(ctx, t.ID, err.Error(), next); err != nil {
 			log.Error("mark task error", "err", err)
 		}
+		return failed
 	}
-}
-
-// retryDelay is the wait after the given failed attempt (1-based).
-func retryDelay(attempt int) time.Duration {
-	d := firstRetry
-	for i := 1; i < attempt && d < maxRetry; i++ {
-		d *= 2
-	}
-	return min(d, maxRetry)
 }

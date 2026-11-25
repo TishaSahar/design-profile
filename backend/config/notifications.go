@@ -8,6 +8,8 @@ import (
 	"net/url"
 	"os"
 
+	"design-profile/backend/internal/tasks"
+
 	"gopkg.in/yaml.v3"
 )
 
@@ -19,6 +21,8 @@ type Notifications struct {
 		// Recipients get an email about every new project request.
 		Recipients []string `yaml:"recipients"`
 	} `yaml:"new_order"`
+	// Outbox paces the worker that sends the notifications (see tasks.Config).
+	Outbox tasks.Config `yaml:"outbox"`
 }
 
 // LoadNotifications reads notifications.yaml. A missing file means no notifications
@@ -40,6 +44,9 @@ func LoadNotifications(path string) (*Notifications, error) {
 		if a, err := mail.ParseAddress(r); err != nil || a.Address != r {
 			return nil, fmt.Errorf("notifications config: %q is not an email address", r)
 		}
+	}
+	if err := n.Outbox.Validate(); err != nil {
+		return nil, fmt.Errorf("notifications config: outbox.%w", err)
 	}
 	if n.SiteURL != "" {
 		if u, err := url.Parse(n.SiteURL); err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" {
