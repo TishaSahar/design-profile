@@ -13,3 +13,15 @@ new_order:
   recipients:
     - designer@example.com
     # - assistant@example.com
+
+# How the notifications are sent out (the outbox worker). Every value is optional:
+# what is left out keeps the default shown here. Durations: 500ms, 30s, 2m, 1h.
+outbox:
+  # Pause after a sent notification before the next one (0s for none).
+  delay: 1s
+  # Pause after a temporary failure (mail server down, "try again later"); the
+  # failed notification is tried again after it too. At least 1s.
+  error_delay: 1m
+  # How often to look for notifications while there are none. At least 1s;
+  # a new request is still emailed at once.
+  no_tasks_delay: 15s

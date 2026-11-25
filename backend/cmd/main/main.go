@@ -123,17 +123,20 @@ func main() {
 	}
 	var recipients []string
 	siteURL := ""
+	pace := tasks.DefaultSettings
 	if notifications != nil {
 		recipients = notifications.NewOrder.Recipients
 		siteURL = notifications.SiteURL
+		pace = notifications.Outbox.Settings()
 	}
-	taskWorker := tasks.NewWorker(repository.NewTaskRepository(pool))
+	taskWorker := tasks.NewWorker(repository.NewTaskRepository(pool), pace)
 	// Registered even without recipients: notifications queued earlier then fail
 	// as fatal with a clear reason instead of waiting forever.
 	taskWorker.Handle(model.TaskNewOrderNotification, tasks.NewOrderNotification(emailClient, recipients, siteURL))
 	if len(recipients) > 0 {
 		requestSvc.NotifyAdmins(taskWorker.Wake)
-		slog.Info("new request notifications are on", "recipients", len(recipients))
+		slog.Info("new request notifications are on", "recipients", len(recipients),
+			"delay", pace.Delay, "error_delay", pace.ErrorDelay, "no_tasks_delay", pace.NoTasksDelay)
 	} else {
 		slog.Warn("new request notifications are off: no new_order.recipients in notifications.yaml")
 	}
